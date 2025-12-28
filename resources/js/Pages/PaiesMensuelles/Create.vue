@@ -33,15 +33,15 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Mois *</label>
-                        <select v-model="form.mois" class="input" :class="{ 'border-red-500': errors.mois }">
+                        <select v-model="form.mois" class="input" :class="{ 'border-red-500': form.errors.mois }">
                             <option v-for="(nom, idx) in moisNoms" :key="idx" :value="idx + 1">{{ nom }}</option>
                         </select>
-                        <p v-if="errors.mois" class="text-red-500 text-sm mt-1">{{ errors.mois }}</p>
+                        <p v-if="form.errors.mois" class="text-red-500 text-sm mt-1">{{ form.errors.mois }}</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Année *</label>
-                        <input v-model="form.annee" type="number" class="input" :class="{ 'border-red-500': errors.annee }" />
-                        <p v-if="errors.annee" class="text-red-500 text-sm mt-1">{{ errors.annee }}</p>
+                        <input v-model="form.annee" type="number" class="input" :class="{ 'border-red-500': form.errors.annee }" />
+                        <p v-if="form.errors.annee" class="text-red-500 text-sm mt-1">{{ form.errors.annee }}</p>
                     </div>
                 </div>
                 
@@ -109,8 +109,6 @@ const form = useForm({
     annee: props.anneeActuelle,
     notes: '',
 });
-
-const errors = form.errors;
 
 const periodeExiste = computed(() => {
     const key = `${form.annee}-${form.mois}`;

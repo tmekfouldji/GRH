@@ -11,13 +11,13 @@
             <form @submit.prevent="submit" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Employé *</label>
-                    <select v-model="form.employe_id" class="input" :class="{ 'border-red-500': errors.employe_id }">
+                    <select v-model="form.employe_id" class="input" :class="{ 'border-red-500': form.errors.employe_id }">
                         <option value="">Sélectionner un employé</option>
                         <option v-for="emp in employes" :key="emp.id" :value="emp.id">
                             {{ emp.prenom }} {{ emp.nom }} - {{ formatMoney(emp.salaire_base) }}
                         </option>
                     </select>
-                    <p v-if="errors.employe_id" class="text-red-500 text-sm mt-1">{{ errors.employe_id }}</p>
+                    <p v-if="form.errors.employe_id" class="text-red-500 text-sm mt-1">{{ form.errors.employe_id }}</p>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
@@ -94,7 +94,6 @@ const form = useForm({
     autres_deductions: 0,
 });
 
-const errors = form.errors;
 const submit = () => form.post('/fiches-paie');
 const formatMoney = (value) => new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD' }).format(value || 0);
 </script>

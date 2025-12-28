@@ -11,11 +11,11 @@
             <form @submit.prevent="submit" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Employé *</label>
-                    <select v-model="form.employe_id" class="input" :class="{ 'border-red-500': errors.employe_id }">
+                    <select v-model="form.employe_id" class="input" :class="{ 'border-red-500': form.errors.employe_id }">
                         <option value="">Sélectionner un employé</option>
                         <option v-for="emp in employes" :key="emp.id" :value="emp.id">{{ emp.prenom }} {{ emp.nom }}</option>
                     </select>
-                    <p v-if="errors.employe_id" class="text-red-500 text-sm mt-1">{{ errors.employe_id }}</p>
+                    <p v-if="form.errors.employe_id" class="text-red-500 text-sm mt-1">{{ form.errors.employe_id }}</p>
                 </div>
                 
                 <div>
@@ -33,13 +33,13 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date de début *</label>
-                        <input v-model="form.date_debut" type="date" class="input" :class="{ 'border-red-500': errors.date_debut }" />
-                        <p v-if="errors.date_debut" class="text-red-500 text-sm mt-1">{{ errors.date_debut }}</p>
+                        <input v-model="form.date_debut" type="date" class="input" :class="{ 'border-red-500': form.errors.date_debut }" />
+                        <p v-if="form.errors.date_debut" class="text-red-500 text-sm mt-1">{{ form.errors.date_debut }}</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Date de fin *</label>
-                        <input v-model="form.date_fin" type="date" class="input" :class="{ 'border-red-500': errors.date_fin }" />
-                        <p v-if="errors.date_fin" class="text-red-500 text-sm mt-1">{{ errors.date_fin }}</p>
+                        <input v-model="form.date_fin" type="date" class="input" :class="{ 'border-red-500': form.errors.date_fin }" />
+                        <p v-if="form.errors.date_fin" class="text-red-500 text-sm mt-1">{{ form.errors.date_fin }}</p>
                     </div>
                 </div>
                 
@@ -74,6 +74,5 @@ const form = useForm({
     motif: '',
 });
 
-const errors = form.errors;
 const submit = () => form.post('/conges');
 </script>

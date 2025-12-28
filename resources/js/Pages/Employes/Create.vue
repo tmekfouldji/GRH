@@ -19,8 +19,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Matricule *</label>
-                            <input v-model="form.matricule" type="text" class="input" :class="{ 'border-red-500': errors.matricule }" />
-                            <p v-if="errors.matricule" class="text-red-500 text-sm mt-1">{{ errors.matricule }}</p>
+                            <input v-model="form.matricule" type="text" class="input" :class="{ 'border-red-500': form.errors.matricule }" />
+                            <p v-if="form.errors.matricule" class="text-red-500 text-sm mt-1">{{ form.errors.matricule }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">CIN</label>
@@ -28,13 +28,13 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-                            <input v-model="form.nom" type="text" class="input" :class="{ 'border-red-500': errors.nom }" />
-                            <p v-if="errors.nom" class="text-red-500 text-sm mt-1">{{ errors.nom }}</p>
+                            <input v-model="form.nom" type="text" class="input" :class="{ 'border-red-500': form.errors.nom }" />
+                            <p v-if="form.errors.nom" class="text-red-500 text-sm mt-1">{{ form.errors.nom }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Prénom *</label>
-                            <input v-model="form.prenom" type="text" class="input" :class="{ 'border-red-500': errors.prenom }" />
-                            <p v-if="errors.prenom" class="text-red-500 text-sm mt-1">{{ errors.prenom }}</p>
+                            <input v-model="form.prenom" type="text" class="input" :class="{ 'border-red-500': form.errors.prenom }" />
+                            <p v-if="form.errors.prenom" class="text-red-500 text-sm mt-1">{{ form.errors.prenom }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -73,8 +73,8 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Date d'embauche *</label>
-                            <input v-model="form.date_embauche" type="date" class="input" :class="{ 'border-red-500': errors.date_embauche }" />
-                            <p v-if="errors.date_embauche" class="text-red-500 text-sm mt-1">{{ errors.date_embauche }}</p>
+                            <input v-model="form.date_embauche" type="date" class="input" :class="{ 'border-red-500': form.errors.date_embauche }" />
+                            <p v-if="form.errors.date_embauche" class="text-red-500 text-sm mt-1">{{ form.errors.date_embauche }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Statut *</label>
@@ -93,8 +93,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Salaire de base (DZD) *</label>
-                            <input v-model="form.salaire_base" type="number" step="100" class="input" :class="{ 'border-red-500': errors.salaire_base }" placeholder="Ex: 35000" />
-                            <p v-if="errors.salaire_base" class="text-red-500 text-sm mt-1">{{ errors.salaire_base }}</p>
+                            <input v-model="form.salaire_base" type="number" step="100" class="input" :class="{ 'border-red-500': form.errors.salaire_base }" placeholder="Ex: 35000" />
+                            <p v-if="form.errors.salaire_base" class="text-red-500 text-sm mt-1">{{ form.errors.salaire_base }}</p>
                             <p class="text-xs text-gray-400 mt-1">SNMG: 20,000 DZD</p>
                         </div>
                         <div>
@@ -241,8 +241,6 @@ const form = useForm({
     mode_paiement: 'virement',
     rib: '',
 });
-
-const errors = form.errors;
 
 const estimerSalaireNet = () => {
     const base = parseFloat(form.salaire_base) || 0;
