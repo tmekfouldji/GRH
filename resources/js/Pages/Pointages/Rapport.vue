@@ -8,8 +8,14 @@
                 <h2 class="text-xl font-semibold text-gray-800">Rapport journalier</h2>
                 <p class="text-sm text-gray-500">{{ formatDateLong(date) }}</p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex items-center gap-1">
+                <button @click="prevDay" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Jour précédent">
+                    <ChevronLeft class="w-5 h-5 text-gray-600" />
+                </button>
                 <input v-model="selectedDate" type="date" @change="changeDate" class="input w-auto" />
+                <button @click="nextDay" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Jour suivant">
+                    <ChevronRight class="w-5 h-5 text-gray-600" />
+                </button>
             </div>
         </div>
         
@@ -65,13 +71,13 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ employe.poste || '-' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                            {{ employe.pointages?.[0]?.heure_entree || '-' }}
+                            {{ formatTime(employe.pointages?.[0]?.heure_entree) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                            {{ employe.pointages?.[0]?.heure_sortie || '-' }}
+                            {{ formatTime(employe.pointages?.[0]?.heure_sortie) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                            {{ employe.pointages?.[0]?.heures_travaillees || 0 }}h
+                            {{ formatHours(employe.pointages?.[0]?.heures_travaillees) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span :class="getStatutClass(employe.pointages?.[0]?.statut)" class="px-2 py-1 text-xs rounded-full font-medium">
@@ -88,7 +94,8 @@
 <script setup>
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
-import { formatDate } from '@/utils/formatters';
+import { formatDate, formatTime, formatHours } from '@/utils/formatters';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 const props = defineProps({
     employes: Array,
@@ -100,6 +107,20 @@ const selectedDate = ref(props.date);
 
 const changeDate = () => {
     router.get('/pointages/rapport/journalier', { date: selectedDate.value });
+};
+
+const prevDay = () => {
+    const d = new Date(selectedDate.value);
+    d.setDate(d.getDate() - 1);
+    selectedDate.value = d.toISOString().split('T')[0];
+    changeDate();
+};
+
+const nextDay = () => {
+    const d = new Date(selectedDate.value);
+    d.setDate(d.getDate() + 1);
+    selectedDate.value = d.toISOString().split('T')[0];
+    changeDate();
 };
 
 const formatDateLong = (date) => formatDate(date, 'long');

@@ -54,13 +54,19 @@ class EmployeController extends Controller
             'email' => 'nullable|email|max:150',
             'telephone' => 'nullable|max:20',
             'poste' => 'nullable|max:100',
+            'categorie' => 'nullable|max:50',
+            'echelon' => 'nullable|max:20',
             'departement' => 'nullable|max:100',
             'date_embauche' => 'required|date',
             'salaire_base' => 'required|numeric|min:0',
+            'prime_transport_defaut' => 'nullable|numeric|min:0',
+            'prime_panier_defaut' => 'nullable|numeric|min:0',
             'statut' => 'required|in:actif,inactif,conge',
             'adresse' => 'nullable|string',
             'cin' => 'nullable|max:20',
-            'cnss' => 'nullable|max:20',
+            'numero_cnas' => 'nullable|max:30',
+            'mode_paiement' => 'nullable|in:virement,especes,cheque',
+            'rib' => 'nullable|max:30',
         ]);
 
         Employe::create($validated);
@@ -96,13 +102,19 @@ class EmployeController extends Controller
             'email' => 'nullable|email|max:150',
             'telephone' => 'nullable|max:20',
             'poste' => 'nullable|max:100',
+            'categorie' => 'nullable|max:50',
+            'echelon' => 'nullable|max:20',
             'departement' => 'nullable|max:100',
             'date_embauche' => 'required|date',
             'salaire_base' => 'required|numeric|min:0',
+            'prime_transport_defaut' => 'nullable|numeric|min:0',
+            'prime_panier_defaut' => 'nullable|numeric|min:0',
             'statut' => 'required|in:actif,inactif,conge',
             'adresse' => 'nullable|string',
             'cin' => 'nullable|max:20',
-            'cnss' => 'nullable|max:20',
+            'numero_cnas' => 'nullable|max:30',
+            'mode_paiement' => 'nullable|in:virement,especes,cheque',
+            'rib' => 'nullable|max:30',
         ]);
 
         $employe->update($validated);

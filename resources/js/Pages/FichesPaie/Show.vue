@@ -84,15 +84,11 @@
                     <h3 class="text-sm font-medium text-gray-500 mb-3">DÉDUCTIONS</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between">
-                            <span class="text-gray-600">Cotisation CNSS</span>
+                            <span class="text-gray-600">Cotisation CNAS (9%)</span>
                             <span class="font-medium text-red-600">-{{ formatMoney(fichePaie.cotisation_cnss) }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-600">Cotisation AMO</span>
-                            <span class="font-medium text-red-600">-{{ formatMoney(fichePaie.cotisation_amo) }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Impôt sur le revenu (IR)</span>
+                            <span class="text-gray-600">IRG (Impôt sur le Revenu Global)</span>
                             <span class="font-medium text-red-600">-{{ formatMoney(fichePaie.ir) }}</span>
                         </div>
                         <div v-if="fichePaie.autres_deductions > 0" class="flex justify-between">
@@ -119,6 +115,7 @@
 </template>
 
 <script setup>
+import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, Pencil, Printer } from 'lucide-vue-next';
 import { formatMoney, getMonthName } from '@/utils/formatters';
 

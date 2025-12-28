@@ -127,9 +127,11 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { Plus, FileSpreadsheet, Download, Eye, Pencil, Printer } from 'lucide-vue-next';
 import { formatMoney, getMonthName } from '@/utils/formatters';
+
+const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 const props = defineProps({ fichesPaie: Object, employes: Array, annees: Array, filters: Object });
 

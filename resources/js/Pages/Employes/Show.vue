@@ -58,12 +58,81 @@
                             <p class="font-medium">{{ formatDate(employe.date_embauche) }}</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Salaire de base</p>
-                            <p class="font-medium text-lg">{{ formatMoney(employe.salaire_base) }}</p>
+                            <p class="text-sm text-gray-500">Ancienneté</p>
+                            <p class="font-medium">{{ employe.anciennete }} an(s)</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">N° CNSS</p>
-                            <p class="font-medium">{{ employe.cnss || '-' }}</p>
+                            <p class="text-sm text-gray-500">N° CNAS</p>
+                            <p class="font-medium">{{ employe.numero_cnas || employe.cnss || '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Catégorie / Échelon</p>
+                            <p class="font-medium">{{ employe.categorie || '-' }} / {{ employe.echelon || '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Mode de paiement</p>
+                            <p class="font-medium">{{ getModePaiementLabel(employe.mode_paiement) }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aperçu Salaire -->
+                <div class="card bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">💰 Aperçu Salaire Mensuel</h3>
+                        <button @click="showGenererModal = true" class="btn btn-primary btn-sm flex items-center gap-1">
+                            <FileText class="w-4 h-4" />
+                            Générer fiche
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <!-- Gains -->
+                        <div class="bg-white rounded-lg p-3">
+                            <p class="text-xs text-gray-500 uppercase mb-2">Gains</p>
+                            <div class="space-y-1 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Salaire de base</span>
+                                    <span class="font-medium">{{ formatMoney(employe.salaire_base) }}</span>
+                                </div>
+                                <div v-if="employe.salaire_preview" class="flex justify-between text-green-600">
+                                    <span>Prime d'ancienneté ({{ employe.anciennete }}%)</span>
+                                    <span class="font-medium">+{{ formatMoney(getSalairePreview('prime_anciennete')) }}</span>
+                                </div>
+                                <div v-if="employe.prime_transport_defaut > 0" class="flex justify-between text-green-600">
+                                    <span>Prime transport</span>
+                                    <span class="font-medium">+{{ formatMoney(employe.prime_transport_defaut) }}</span>
+                                </div>
+                                <div v-if="employe.prime_panier_defaut > 0" class="flex justify-between text-green-600">
+                                    <span>Prime panier</span>
+                                    <span class="font-medium">+{{ formatMoney(employe.prime_panier_defaut) }}</span>
+                                </div>
+                                <div class="flex justify-between pt-2 border-t font-semibold">
+                                    <span>Salaire Brut</span>
+                                    <span class="text-blue-600">{{ formatMoney(getSalairePreview('salaire_brut')) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Déductions -->
+                        <div class="bg-white rounded-lg p-3">
+                            <p class="text-xs text-gray-500 uppercase mb-2">Retenues</p>
+                            <div class="space-y-1 text-sm">
+                                <div class="flex justify-between text-red-600">
+                                    <span>CNAS (9%)</span>
+                                    <span class="font-medium">-{{ formatMoney(getSalairePreview('cotisation_cnas')) }}</span>
+                                </div>
+                                <div class="flex justify-between text-red-600">
+                                    <span>IRG</span>
+                                    <span class="font-medium">-{{ formatMoney(getSalairePreview('irg')) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Net -->
+                        <div class="bg-green-600 text-white rounded-lg p-4 flex justify-between items-center">
+                            <span class="font-semibold">SALAIRE NET</span>
+                            <span class="text-2xl font-bold">{{ formatMoney(getSalairePreview('salaire_net')) }}</span>
                         </div>
                     </div>
                 </div>
@@ -159,15 +228,92 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal Générer Fiche de Paie -->
+    <div v-if="showGenererModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Générer une fiche de paie</h3>
+            <p class="text-sm text-gray-500 mb-4">Pour {{ employe.prenom }} {{ employe.nom }}</p>
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mois</label>
+                        <select v-model="genererForm.mois" class="input">
+                            <option v-for="(nom, idx) in moisNoms" :key="idx" :value="idx + 1">{{ nom }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Année</label>
+                        <input v-model="genererForm.annee" type="number" class="input" />
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prime de rendement</label>
+                    <input v-model="genererForm.prime_rendement" type="number" step="100" class="input" placeholder="0" />
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6">
+                <button @click="showGenererModal = false" class="btn btn-secondary">Annuler</button>
+                <button @click="genererFiche" :disabled="genererForm.processing" class="btn btn-primary">
+                    Générer
+                </button>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup>
-import { ArrowLeft, Pencil } from 'lucide-vue-next';
+import { ref, reactive } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowLeft, Pencil, FileText } from 'lucide-vue-next';
 import { formatDate, formatMoney, getMonthName } from '@/utils/formatters';
 
 const props = defineProps({
     employe: Object,
 });
+
+const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+const showGenererModal = ref(false);
+const genererForm = reactive({
+    mois: new Date().getMonth() + 1,
+    annee: new Date().getFullYear(),
+    prime_rendement: 0,
+    processing: false,
+});
+
+const getSalairePreview = (key) => {
+    return props.employe.salaire_preview?.[key] ?? 0;
+};
+
+const getModePaiementLabel = (mode) => ({
+    virement: 'Virement bancaire',
+    especes: 'Espèces',
+    cheque: 'Chèque',
+}[mode] || mode || 'Non défini');
+
+const genererFiche = () => {
+    genererForm.processing = true;
+    router.post('/fiches-paie', {
+        employe_id: props.employe.id,
+        mois: genererForm.mois,
+        annee: genererForm.annee,
+        prime_rendement: genererForm.prime_rendement,
+        prime_transport: props.employe.prime_transport_defaut || 0,
+        autres_primes: props.employe.prime_panier_defaut || 0,
+    }, {
+        onSuccess: () => {
+            showGenererModal.value = false;
+            genererForm.processing = false;
+        },
+        onError: () => {
+            genererForm.processing = false;
+        }
+    });
+};
 
 const getStatutClass = (statut) => ({
     present: 'bg-green-100 text-green-800',

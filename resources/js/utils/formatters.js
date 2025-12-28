@@ -99,12 +99,18 @@ export function getInitials(person) {
 }
 
 /**
- * Formater une durée en heures
+ * Formater une durée en heures et minutes (ex: 9h 47m, -1h 30m)
  * @param {number} hours 
  */
 export function formatHours(hours) {
-    if (hours === null || hours === undefined) return '-';
-    return `${parseFloat(hours).toFixed(1)}h`;
+    if (hours === null || hours === undefined || hours === 0) return '-';
+    const isNegative = hours < 0;
+    const absHours = Math.abs(hours);
+    const h = Math.floor(absHours);
+    const m = Math.round((absHours - h) * 60);
+    const sign = isNegative ? '-' : '';
+    if (m === 0) return `${sign}${h}h`;
+    return `${sign}${h}h ${m}m`;
 }
 
 /**

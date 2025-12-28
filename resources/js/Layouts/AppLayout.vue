@@ -16,11 +16,11 @@
             </div>
             
             <!-- Navigation -->
-            <nav class="flex-1 p-4 space-y-2">
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
                 <Link 
                     href="/"
                     :class="[
-                        'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors',
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
                         isActive('/') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
                     ]"
                 >
@@ -28,32 +28,24 @@
                     <span v-show="sidebarOpen">Tableau de bord</span>
                 </Link>
                 
+                <!-- Section Personnel -->
+                <div v-show="sidebarOpen" class="pt-4 pb-1">
+                    <span class="px-4 text-xs font-semibold text-blue-300 uppercase tracking-wider">Personnel</span>
+                </div>
                 <Link 
                     href="/employes"
                     :class="[
-                        'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors',
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
                         isActive('/employes') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
                     ]"
                 >
                     <UserCircle class="w-5 h-5 flex-shrink-0" />
                     <span v-show="sidebarOpen">Employés</span>
                 </Link>
-                
-                <Link 
-                    href="/pointages"
-                    :class="[
-                        'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors',
-                        isActive('/pointages') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
-                    ]"
-                >
-                    <Clock class="w-5 h-5 flex-shrink-0" />
-                    <span v-show="sidebarOpen">Pointages</span>
-                </Link>
-                
                 <Link 
                     href="/conges"
                     :class="[
-                        'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors',
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
                         isActive('/conges') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
                     ]"
                 >
@@ -61,26 +53,69 @@
                     <span v-show="sidebarOpen">Congés</span>
                 </Link>
                 
+                <!-- Section Temps -->
+                <div v-show="sidebarOpen" class="pt-4 pb-1">
+                    <span class="px-4 text-xs font-semibold text-blue-300 uppercase tracking-wider">Temps</span>
+                </div>
+                <Link 
+                    href="/pointages"
+                    :class="[
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
+                        isActive('/pointages') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                    ]"
+                >
+                    <Clock class="w-5 h-5 flex-shrink-0" />
+                    <span v-show="sidebarOpen">Pointages</span>
+                </Link>
+                
+                <!-- Section Paie -->
+                <div v-show="sidebarOpen" class="pt-4 pb-1">
+                    <span class="px-4 text-xs font-semibold text-blue-300 uppercase tracking-wider">Paie</span>
+                </div>
+                <Link 
+                    href="/paies-mensuelles"
+                    :class="[
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
+                        isActive('/paies-mensuelles') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                    ]"
+                >
+                    <Wallet class="w-5 h-5 flex-shrink-0" />
+                    <span v-show="sidebarOpen">Paies Mensuelles</span>
+                </Link>
                 <Link 
                     href="/fiches-paie"
                     :class="[
-                        'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors',
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
                         isActive('/fiches-paie') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
                     ]"
                 >
                     <FileText class="w-5 h-5 flex-shrink-0" />
-                    <span v-show="sidebarOpen">Fiches de paie</span>
+                    <span v-show="sidebarOpen">Fiches de Paie</span>
                 </Link>
                 
+                <!-- Section Outils -->
+                <div v-show="sidebarOpen" class="pt-4 pb-1">
+                    <span class="px-4 text-xs font-semibold text-blue-300 uppercase tracking-wider">Outils</span>
+                </div>
                 <Link 
                     href="/pointages/rapport/journalier"
                     :class="[
-                        'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors',
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
                         isActive('/pointages/rapport') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
                     ]"
                 >
                     <BarChart3 class="w-5 h-5 flex-shrink-0" />
                     <span v-show="sidebarOpen">Rapports</span>
+                </Link>
+                <Link 
+                    href="/guide-salaire"
+                    :class="[
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
+                        isActive('/guide-salaire') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                    ]"
+                >
+                    <BookOpen class="w-5 h-5 flex-shrink-0" />
+                    <span v-show="sidebarOpen">Guide Salaire</span>
                 </Link>
             </nav>
             
@@ -137,11 +172,11 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { 
     Users, LayoutDashboard, UserCircle, Clock, CalendarDays, 
     FileText, BarChart3, ChevronLeft, ChevronRight, User,
-    CheckCircle, AlertCircle
+    CheckCircle, AlertCircle, BookOpen, Wallet
 } from 'lucide-vue-next';
 
 const sidebarOpen = ref(true);

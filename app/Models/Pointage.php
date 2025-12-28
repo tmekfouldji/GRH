@@ -48,32 +48,34 @@ class Pointage extends Model
 
     /**
      * Calculer les heures travaillées à partir de datetime complets
-     * Gère les erreurs humaines et les travaux de nuit
+     * Retourne [heures_totales, heures_supplementaires]
      */
-    public static function calculerHeures($heure_entree, $heure_sortie)
+    public static function calculerHeures($datetime_entree, $datetime_sortie)
     {
-        if (!$heure_entree || !$heure_sortie) {
+        if (!$datetime_entree || !$datetime_sortie) {
             return [0, 0];
         }
 
-        $entree = \Carbon\Carbon::parse($heure_entree);
-        $sortie = \Carbon\Carbon::parse($heure_sortie);
+        $entree = \Carbon\Carbon::parse($datetime_entree);
+        $sortie = \Carbon\Carbon::parse($datetime_sortie);
         
-        // Calculer la différence (peut être négative si erreur humaine)
-        $minutes = $entree->diffInMinutes($sortie, false);
+        // Si sortie est avant entrée (ex: entrée 23h, sortie 07h lendemain)
+        // On ajoute un jour à la sortie
+        if ($sortie->lt($entree)) {
+            $sortie->addDay();
+        }
         
-        // Si négatif (sortie avant entrée), prendre la valeur absolue
-        // C'est une erreur humaine, on calcule quand même
-        $heures = abs($minutes) / 60;
+        // Calculer la différence en minutes (toujours positive avec abs)
+        $minutes = abs($entree->diffInMinutes($sortie));
+        $heures_totales = $minutes / 60;
         
         // Limiter à 24h max (protection contre erreurs)
-        $heures = min($heures, 24);
+        $heures_totales = min($heures_totales, 24);
         
-        // Heures normales (max 8h) et supplémentaires
-        $heures_normales = min($heures, 8);
-        $heures_sup = max(0, $heures - 8);
+        // Heures supplémentaires = heures au-delà de 8h
+        $heures_sup = max(0, $heures_totales - 8);
 
-        return [round($heures_normales, 2), round($heures_sup, 2)];
+        return [round($heures_totales, 2), round($heures_sup, 2)];
     }
 
     /**

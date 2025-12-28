@@ -187,10 +187,14 @@
                                 <span v-else class="text-gray-400">-</span>
                             </td>
                             <td class="px-4 py-3 text-center">
-                                <span class="font-semibold text-gray-800">{{ pointage.heures_travaillees }}h</span>
+                                <span class="font-semibold text-gray-800">{{ formatHours(pointage.heures_travaillees) }}</span>
                                 <span v-if="pointage.heures_supplementaires > 0" 
-                                    class="ml-1 text-xs text-orange-600 font-medium">
-                                    +{{ pointage.heures_supplementaires }}h
+                                    class="ml-1 text-xs text-green-600 font-medium">
+                                    +{{ formatHours(pointage.heures_supplementaires) }}
+                                </span>
+                                <span v-else-if="pointage.heures_supplementaires < 0" 
+                                    class="ml-1 text-xs text-red-600 font-medium">
+                                    {{ formatHours(pointage.heures_supplementaires) }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-center">
@@ -303,7 +307,7 @@ import {
     Calendar, Clock, UserCheck, UserX, Timer, Zap, BarChart3,
     ChevronLeft, ChevronRight, ArrowDownCircle, ArrowUpCircle
 } from 'lucide-vue-next';
-import { formatDate as formatDateUtil, formatTime as formatTimeUtil, getInitials as getInitialsUtil } from '@/utils/formatters';
+import { formatDate as formatDateUtil, formatTime as formatTimeUtil, formatHours, getInitials as getInitialsUtil } from '@/utils/formatters';
 
 const props = defineProps({
     pointages: Object,

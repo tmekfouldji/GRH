@@ -154,8 +154,15 @@ class FichePaieController extends Controller
 
         $employes = Employe::where('statut', '!=', 'inactif')->get();
         $count = 0;
+        $skipped = [];
 
         foreach ($employes as $employe) {
+            // Vérifier que l'employé a un salaire de base
+            if (!$employe->salaire_base || $employe->salaire_base <= 0) {
+                $skipped[] = $employe->nom_complet;
+                continue;
+            }
+
             // Vérifier si la fiche existe déjà
             $exists = FichePaie::where('employe_id', $employe->id)
                 ->where('mois', $request->mois)
@@ -183,8 +190,13 @@ class FichePaieController extends Controller
             }
         }
 
+        $message = "{$count} fiches de paie générées avec succès.";
+        if (count($skipped) > 0) {
+            $message .= " ⚠️ Ignorés (sans salaire): " . implode(', ', $skipped);
+        }
+
         return redirect()->route('fiches-paie.index')
-            ->with('success', "{$count} fiches de paie générées avec succès.");
+            ->with('success', $message);
     }
 
     // Exporter vers Excel

@@ -57,9 +57,33 @@ class ImportPointageController extends Controller
             $worksheet = $spreadsheet->getActiveSheet();
             $rows = $worksheet->toArray();
             
+            // Log les données BRUTES avant toute modification
+            Log::info("Import: " . count($rows) . " lignes lues AVANT réparation");
+            Log::info("Import: Nombre de colonnes ligne 1: " . (isset($rows[0]) ? count($rows[0]) : 0));
+            if (isset($rows[0])) {
+                Log::info("Import BRUT ligne 1: " . json_encode($rows[0]));
+            }
+            if (isset($rows[1])) {
+                Log::info("Import BRUT ligne 2: " . json_encode($rows[1]));
+            }
+            
+            // Vérifier si les données sont corrompues (contiennent @ comme séparateur)
+            // Cela arrive avec certains exports de pointeuses
+            $rows = $this->fixCorruptedRows($rows);
+            
+            // Log les premières lignes APRES réparation
+            Log::info("Import: " . count($rows) . " lignes APRES réparation");
+            if (isset($rows[0])) {
+                Log::info("Import REPARE ligne 1: " . json_encode(array_slice($rows[0], 0, 6)));
+            }
+            if (isset($rows[1])) {
+                Log::info("Import REPARE ligne 2: " . json_encode(array_slice($rows[1], 0, 6)));
+            }
+            
             // Supprimer l'en-tête si présent
             if (isset($rows[0]) && (
                 stripos($rows[0][0] ?? '', 'no') !== false ||
+                stripos($rows[0][0] ?? '', 'ac') !== false ||
                 stripos($rows[0][2] ?? '', 'name') !== false ||
                 stripos($rows[0][2] ?? '', 'nom') !== false
             )) {
@@ -81,24 +105,42 @@ class ImportPointageController extends Controller
                 $results['total']++;
                 $lineNum = $index + 2;
 
-                // Structure du fichier ZKTeco:
-                // Col A (0): AC-No (code employé) - OBLIGATOIRE
+                // Structure du fichier attendu:
+                // Col A (0): AC-No. (Code employé) - OBLIGATOIRE
                 // Col B (1): Numéro (ignoré)
                 // Col C (2): Nom employé
-                // Col D (3): DateTime
+                // Col D (3): Date/Heure (DD/MM/YYYY HH:MM)
                 // Col E (4): Type (C/In, C/Out)
                 
-                $codeEmploye = trim($row[0] ?? '');
+                // Nettoyer les données de la ligne (supprimer null bytes et caractères invisibles)
+                $cleanRow = array_map(function($val) {
+                    if ($val === null) return '';
+                    $val = preg_replace('/[\x00-\x1F\x7F]/u', '', (string)$val);
+                    return trim($val);
+                }, $row);
+
+                $codeEmploye = trim($cleanRow[0] ?? '');    // Col A - AC-No (Code employé)
                 
                 // Skip si pas de code employé (AC-No vide)
                 if (empty($codeEmploye)) {
                     continue;
                 }
 
-                // Colonne B (index 1) ignorée - c'est juste un numéro de ligne
-                $nomEmploye = trim($row[2] ?? '');    // Col C
-                $dateTimeStr = trim($row[3] ?? '');   // Col D
-                $type = strtolower(trim($row[4] ?? '')); // Col E
+                // Valider que le code employé est valide (numérique, 1-4 chiffres)
+                if (!preg_match('/^\d{1,4}$/', $codeEmploye)) {
+                    // Si le code n'est pas numérique pur, essayer d'extraire les chiffres
+                    if (preg_match('/(\d{1,4})/', $codeEmploye, $m)) {
+                        $codeEmploye = $m[1];
+                    } else {
+                        Log::warning("Import ligne {$lineNum}: Code employé invalide ignoré: " . substr($codeEmploye, 0, 30));
+                        continue;
+                    }
+                }
+
+                // Col B (index 1) ignoré
+                $nomEmploye = trim($cleanRow[2] ?? '');     // Col C - Nom
+                $dateTimeStr = trim($cleanRow[3] ?? '');    // Col D - Date/Heure
+                $type = strtolower(trim($cleanRow[4] ?? '')); // Col E - Type
 
                 if (empty($dateTimeStr)) {
                     continue;
@@ -223,6 +265,18 @@ class ImportPointageController extends Controller
      */
     private function parseDateTime($dateTimeStr)
     {
+        if (empty($dateTimeStr)) {
+            return null;
+        }
+
+        // Nettoyer la chaîne: supprimer les null bytes et caractères invisibles
+        $dateTimeStr = preg_replace('/[\x00-\x1F\x7F]/u', '', $dateTimeStr);
+        $dateTimeStr = trim($dateTimeStr);
+        
+        if (empty($dateTimeStr)) {
+            return null;
+        }
+
         $formats = [
             'd/m/Y H:i',
             'd/m/Y H:i:s',
@@ -349,17 +403,26 @@ class ImportPointageController extends Controller
      */
     private function isEntree($type)
     {
-        $entreesTypes = ['c/in', 'cin', 'in', 'entree', 'entrée', 'check-in', 'checkin', 'arrivée', 'arrivee'];
-        $sortiesTypes = ['c/out', 'cout', 'out', 'sortie', 'check-out', 'checkout', 'départ', 'depart', 'out back'];
+        $entreesTypes = ['c/in', 'cin', 'in', 'entree', 'entrée', 'check-in', 'checkin', 'arrivée', 'arrivee', 'overtime in'];
+        $sortiesTypes = ['c/out', 'cout', 'out', 'sortie', 'check-out', 'checkout', 'départ', 'depart', 'out back', 'overtime out'];
 
         $type = strtolower(trim($type));
 
+        // Vérification exacte d'abord
         if (in_array($type, $entreesTypes)) {
             return true;
         }
 
         if (in_array($type, $sortiesTypes)) {
             return false;
+        }
+
+        // Vérifier les patterns "overtime in" et "overtime out"
+        if (str_contains($type, 'overtime out') || str_contains($type, 'out back')) {
+            return false;
+        }
+        if (str_contains($type, 'overtime in')) {
+            return true;
         }
 
         // Par défaut, vérifier si contient "in" ou "out"
@@ -514,7 +577,8 @@ class ImportPointageController extends Controller
 
         foreach ($rows as $rowIndex => $row) {
             foreach ($row as $colIndex => $value) {
-                $sheet->setCellValueByColumnAndRow($colIndex + 1, $rowIndex + 1, $value);
+                $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1) . ($rowIndex + 1);
+                $sheet->setCellValue($cell, $value);
             }
         }
 
@@ -553,11 +617,148 @@ class ImportPointageController extends Controller
 
         foreach ($rows as $rowIndex => $row) {
             foreach ($row as $colIndex => $value) {
-                $sheet->setCellValueByColumnAndRow($colIndex + 1, $rowIndex + 1, $value);
+                $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex + 1) . ($rowIndex + 1);
+                $sheet->setCellValue($cell, $value);
             }
         }
 
         Log::info("Import: HTML parsé, " . count($rows) . " lignes trouvées");
         return $spreadsheet;
+    }
+
+    /**
+     * Réparer les lignes corrompues (données avec @ comme séparateur)
+     * Certains exports de pointeuses produisent des données mal formatées
+     */
+    private function fixCorruptedRows($rows)
+    {
+        if (empty($rows)) {
+            return $rows;
+        }
+
+        // Vérifier si les données sont corrompues en vérifiant plusieurs lignes
+        $needsRepair = false;
+        $checkRows = array_slice($rows, 0, min(5, count($rows)));
+        
+        foreach ($checkRows as $row) {
+            $fullLine = implode('', array_map('strval', $row));
+            // Si une ligne contient @ et des patterns comme dates, c'est corrompu
+            if (str_contains($fullLine, '@') && preg_match('/\d{2}\/\d{2}\/\d{4}/', $fullLine)) {
+                $needsRepair = true;
+                break;
+            }
+        }
+        
+        // Si les données semblent normales (plus de 4 colonnes propres, pas de @)
+        if (!$needsRepair && isset($rows[1]) && count($rows[1]) >= 4) {
+            $firstDataCell = $rows[1][0] ?? '';
+            if (!str_contains((string)$firstDataCell, '@') && preg_match('/^\d{1,3}$/', trim($firstDataCell))) {
+                Log::info("Import: Données semblent normales, pas de réparation nécessaire");
+                return $rows;
+            }
+        }
+
+        Log::info("Import: Détection de données corrompues, tentative de réparation...");
+        
+        $fixedRows = [];
+        
+        foreach ($rows as $rowIndex => $row) {
+            // Concaténer toutes les cellules de la ligne
+            $fullLine = implode('', array_map('strval', $row));
+            
+            // Skip les lignes d'en-tête
+            if ($rowIndex == 0 && (stripos($fullLine, 'AC-No') !== false || stripos($fullLine, 'Name') !== false)) {
+                continue;
+            }
+            
+            // Nettoyer les caractères de contrôle et caractères étranges
+            $fullLine = preg_replace('/[\x00-\x1F\x7F-\x9F]/u', '', $fullLine);
+            
+            // Si la ligne contient @, c'est probablement le séparateur
+            if (str_contains($fullLine, '@')) {
+                $parts = explode('@', $fullLine);
+                
+                // Parser les parties pour extraire les données
+                $fixedRow = $this->parseCorruptedParts($parts);
+                if ($fixedRow) {
+                    $fixedRows[] = $fixedRow;
+                }
+            } else {
+                // Ligne sans @ - peut-être déjà formatée correctement
+                if (count($row) >= 4) {
+                    $fixedRows[] = $row;
+                }
+            }
+        }
+        
+        Log::info("Import: " . count($fixedRows) . " lignes réparées sur " . count($rows) . " lignes originales");
+        
+        // Si aucune ligne réparée, retourner les originales pour essayer quand même
+        if (empty($fixedRows)) {
+            Log::warning("Import: Aucune ligne réparée, retour aux données originales");
+            return $rows;
+        }
+        
+        return $fixedRows;
+    }
+
+    /**
+     * Parser les parties d'une ligne corrompue et reconstruire le format attendu
+     * Format typique après split par @: ['', '28', '', 'BEN AMOUR AICHA', '30/11/2025 07:50', 'C/In', 'OverTime Out', 'FOT', '']
+     */
+    private function parseCorruptedParts($parts)
+    {
+        $code = null;
+        $nom = null;
+        $datetime = null;
+        $type = null;
+        
+        foreach ($parts as $index => $part) {
+            $part = trim($part);
+            if (empty($part)) continue;
+            
+            // Nettoyer les caractères parasites (chiffres/lettres collés aux valeurs)
+            $cleanPart = preg_replace('/^[^a-zA-Z0-9\/]+|[^a-zA-Z0-9\/\s:]+$/', '', $part);
+            $cleanPart = trim($cleanPart);
+            
+            // Détecter le code employé (1-3 chiffres, peut être collé à d'autres caractères)
+            if (!$code && preg_match('/^(\d{1,3})/', $cleanPart, $m)) {
+                // S'assurer que c'est bien un code (pas une date)
+                if (!preg_match('/\d{2}\/\d{2}\/\d{4}/', $part)) {
+                    $code = $m[1];
+                    continue;
+                }
+            }
+            
+            // Détecter la date/heure (format DD/MM/YYYY HH:MM)
+            if (!$datetime && preg_match('/(\d{2}\/\d{2}\/\d{4}\s*\d{2}:\d{2})/', $part, $m)) {
+                $datetime = $m[1];
+                continue;
+            }
+            
+            // Détecter le type (C/In, C/Out, OverTime In, OverTime Out, Out Back, etc.)
+            if (!$type && preg_match('/(C\/In|C\/Out|OverTime\s*In|OverTime\s*Out|Out\s*Back)/i', $part, $m)) {
+                $type = $m[1];
+                continue;
+            }
+            
+            // Détecter le nom (texte avec lettres, au moins 2 caractères, pas de mots réservés)
+            if (!$nom && strlen($cleanPart) >= 2) {
+                // Vérifier que c'est un nom (contient des lettres, pas de mots réservés)
+                if (preg_match('/[a-zA-Z]{2,}/', $cleanPart) && 
+                    !preg_match('/^(FOT|Invalid|Repeat|OverTime|C\/)/i', $cleanPart)) {
+                    $nom = $cleanPart;
+                    continue;
+                }
+            }
+        }
+        
+        // Vérifier qu'on a les éléments essentiels (code et datetime)
+        if ($code && $datetime) {
+            Log::debug("Import parsed: code=$code, nom=" . ($nom ?? 'null') . ", datetime=$datetime, type=" . ($type ?? 'null'));
+            return [$code, '', $nom ?? 'Inconnu', $datetime, $type ?? 'C/In'];
+        }
+        
+        return null;
     }
 }

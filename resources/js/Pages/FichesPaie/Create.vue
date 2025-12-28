@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { X, Loader2 } from 'lucide-vue-next';
 
 const props = defineProps({ employes: Array });

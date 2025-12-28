@@ -42,10 +42,31 @@ class PointageController extends Controller
         
         $employes = Employe::where('statut', 'actif')->orderBy('matricule')->get();
 
+        // Calculer les stats pour la période filtrée
+        $statsQuery = Pointage::query();
+        if ($request->filled('date_debut')) {
+            $statsQuery->whereDate('date_pointage', '>=', $request->date_debut);
+        }
+        if ($request->filled('date_fin')) {
+            $statsQuery->whereDate('date_pointage', '<=', $request->date_fin);
+        }
+        if ($request->filled('date') && !$request->filled('date_debut')) {
+            $statsQuery->whereDate('date_pointage', $request->date);
+        }
+        
+        $allPointages = $statsQuery->get();
+        $stats = [
+            'presents' => $allPointages->where('statut', 'present')->count(),
+            'retards' => $allPointages->where('statut', 'retard')->count(),
+            'absents' => $allPointages->where('statut', 'absent')->count(),
+            'totalHeures' => round($allPointages->sum('heures_travaillees'), 1),
+        ];
+
         return Inertia::render('Pointages/Index', [
             'pointages' => $pointages,
             'employes' => $employes,
             'filters' => $request->only(['date', 'date_debut', 'date_fin', 'employe_id', 'statut']),
+            'stats' => $stats,
         ]);
     }
 
@@ -65,6 +86,14 @@ class PointageController extends Controller
             'statut' => 'required|in:present,absent,retard,conge,maladie,mission',
             'commentaire' => 'nullable|string',
         ]);
+
+        // Combiner date et heure en datetime complet
+        if ($validated['heure_entree']) {
+            $validated['heure_entree'] = Carbon::parse($validated['date_pointage'] . ' ' . $validated['heure_entree']);
+        }
+        if ($validated['heure_sortie']) {
+            $validated['heure_sortie'] = Carbon::parse($validated['date_pointage'] . ' ' . $validated['heure_sortie']);
+        }
 
         // Calculer les heures travaillées
         if ($validated['heure_entree'] && $validated['heure_sortie']) {
@@ -98,6 +127,14 @@ class PointageController extends Controller
             'statut' => 'required|in:present,absent,retard,conge,maladie,mission',
             'commentaire' => 'nullable|string',
         ]);
+
+        // Combiner date et heure en datetime complet
+        if ($validated['heure_entree']) {
+            $validated['heure_entree'] = Carbon::parse($validated['date_pointage'] . ' ' . $validated['heure_entree']);
+        }
+        if ($validated['heure_sortie']) {
+            $validated['heure_sortie'] = Carbon::parse($validated['date_pointage'] . ' ' . $validated['heure_sortie']);
+        }
 
         // Calculer les heures travaillées
         if ($validated['heure_entree'] && $validated['heure_sortie']) {
@@ -134,16 +171,16 @@ class PointageController extends Controller
                 'date_pointage' => today(),
             ],
             [
-                'heure_entree' => now()->format('H:i:s'),
+                'heure_entree' => now(),
                 'statut' => 'present',
             ]
         );
 
         if (!$pointage->wasRecentlyCreated) {
-            $pointage->update(['heure_entree' => now()->format('H:i:s')]);
+            $pointage->update(['heure_entree' => now()]);
         }
 
-        return redirect()->back()->with('success', 'Entrée enregistrée.');
+        return redirect()->back()->with('success', 'Entrée enregistrée à ' . now()->format('H:i'));
     }
 
     // Pointage rapide (sortie)
@@ -156,7 +193,7 @@ class PointageController extends Controller
             ->first();
 
         if ($pointage) {
-            $heure_sortie = now()->format('H:i:s');
+            $heure_sortie = now();
             list($heures_normales, $heures_sup) = Pointage::calculerHeures(
                 $pointage->heure_entree, 
                 $heure_sortie
@@ -168,7 +205,7 @@ class PointageController extends Controller
                 'heures_supplementaires' => $heures_sup,
             ]);
 
-            return redirect()->back()->with('success', 'Sortie enregistrée.');
+            return redirect()->back()->with('success', 'Sortie enregistrée à ' . now()->format('H:i'));
         }
 
         return redirect()->back()->with('error', 'Aucune entrée trouvée pour aujourd\'hui.');
@@ -192,12 +229,23 @@ class PointageController extends Controller
             'absents' => 0,
             'retards' => 0,
             'conges' => 0,
+            'maladies' => 0,
+            'missions' => 0,
         ];
 
         foreach ($employes as $employe) {
             $pointage = $employe->pointages->first();
             if ($pointage) {
-                $stats[$pointage->statut === 'present' ? 'presents' : $pointage->statut . 's']++;
+                $key = match($pointage->statut) {
+                    'present' => 'presents',
+                    'absent' => 'absents',
+                    'retard' => 'retards',
+                    'conge' => 'conges',
+                    'maladie' => 'maladies',
+                    'mission' => 'missions',
+                    default => 'absents',
+                };
+                $stats[$key]++;
             } else {
                 $stats['absents']++;
             }

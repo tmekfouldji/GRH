@@ -31,8 +31,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td class="px-3 py-1">A</td><td>Numéro</td><td>1</td></tr>
-                        <tr><td class="px-3 py-1 font-bold">B</td><td class="font-bold">AC-No. (Code employé)</td><td class="font-bold">01</td></tr>
+                        <tr><td class="px-3 py-1 font-bold">A</td><td class="font-bold">AC-No. (Code employé)</td><td class="font-bold">01</td></tr>
+                        <tr><td class="px-3 py-1">B</td><td>Numéro (ignoré)</td><td>1</td></tr>
                         <tr><td class="px-3 py-1">C</td><td>Nom employé</td><td>NABIL BBS</td></tr>
                         <tr><td class="px-3 py-1">D</td><td>Date/Heure</td><td>01/11/2025 08:30</td></tr>
                         <tr><td class="px-3 py-1">E</td><td>Type</td><td>C/In ou C/Out</td></tr>
