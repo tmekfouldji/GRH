@@ -11,7 +11,7 @@
                     <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
                         <Users class="w-6 h-6 text-blue-800" />
                     </div>
-                    <span v-show="sidebarOpen" class="text-xl font-bold">GRH Textile</span>
+                    <span v-show="sidebarOpen" class="text-xl font-bold">Talentee</span>
                 </div>
             </div>
             
@@ -61,7 +61,7 @@
                     href="/pointages"
                     :class="[
                         'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
-                        isActive('/pointages') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                        isActiveExact('/pointages') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
                     ]"
                 >
                     <Clock class="w-5 h-5 flex-shrink-0" />
@@ -117,6 +117,53 @@
                     <BookOpen class="w-5 h-5 flex-shrink-0" />
                     <span v-show="sidebarOpen">Guide Salaire</span>
                 </Link>
+                <Link 
+                    href="/simulateur-salaire"
+                    :class="[
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
+                        isActive('/simulateur-salaire') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                    ]"
+                >
+                    <Calculator class="w-5 h-5 flex-shrink-0" />
+                    <span v-show="sidebarOpen">Simulateur</span>
+                </Link>
+                <Link 
+                    href="/simulateur-inverse"
+                    :class="[
+                        'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
+                        isActive('/simulateur-inverse') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                    ]"
+                >
+                    <ArrowUpDown class="w-5 h-5 flex-shrink-0" />
+                    <span v-show="sidebarOpen">Simulateur Inversé</span>
+                </Link>
+
+                <!-- Section Admin (visible only to admins) -->
+                <template v-if="$page.props.auth?.user?.is_admin">
+                    <div v-show="sidebarOpen" class="pt-4 pb-1">
+                        <span class="px-4 text-xs font-semibold text-blue-300 uppercase tracking-wider">Administration</span>
+                    </div>
+                    <Link 
+                        href="/users"
+                        :class="[
+                            'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
+                            isActive('/users') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                        ]"
+                    >
+                        <UserCog class="w-5 h-5 flex-shrink-0" />
+                        <span v-show="sidebarOpen">Utilisateurs</span>
+                    </Link>
+                    <Link 
+                        href="/activity-logs"
+                        :class="[
+                            'flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors',
+                            isActive('/activity-logs') ? 'bg-blue-700' : 'hover:bg-blue-700/50'
+                        ]"
+                    >
+                        <ScrollText class="w-5 h-5 flex-shrink-0" />
+                        <span v-show="sidebarOpen">Journal</span>
+                    </Link>
+                </template>
             </nav>
             
             <!-- Toggle Button -->
@@ -135,13 +182,39 @@
             <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">{{ $page.props.title || 'Tableau de bord' }}</h1>
-                        <p class="text-sm text-gray-500">{{ $page.props.subtitle || 'Système de gestion des ressources humaines' }}</p>
+                        <h1 class="text-2xl font-bold text-gray-800">{{ pageTitle }}</h1>
+                        <p class="text-sm text-gray-500">{{ pageSubtitle }}</p>
                     </div>
                     <div class="flex items-center space-x-4">
                         <span class="text-sm text-gray-600">{{ currentDate }}</span>
-                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User class="w-5 h-5 text-blue-600" />
+                        
+                        <!-- User Menu -->
+                        <div class="relative" ref="userMenuRef">
+                            <button @click="showUserMenu = !showUserMenu" 
+                                class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <span class="text-blue-600 font-semibold text-sm">{{ userInitial }}</span>
+                                </div>
+                                <span class="text-sm font-medium text-gray-700">{{ $page.props.auth?.user?.name }}</span>
+                                <ChevronDown class="w-4 h-4 text-gray-400" />
+                            </button>
+                            
+                            <div v-if="showUserMenu" 
+                                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                                <div class="px-4 py-2 border-b border-gray-100">
+                                    <p class="text-sm font-medium text-gray-900">{{ $page.props.auth?.user?.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ $page.props.auth?.user?.email }}</p>
+                                    <span class="inline-block mt-1 px-2 py-0.5 text-xs rounded-full"
+                                        :class="$page.props.auth?.user?.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'">
+                                        {{ $page.props.auth?.user?.is_admin ? 'Administrateur' : 'Utilisateur' }}
+                                    </span>
+                                </div>
+                                <button @click="logout" 
+                                    class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <LogOut class="w-4 h-4" />
+                                    Déconnexion
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -171,15 +244,18 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Link, usePage, router } from '@inertiajs/vue3';
 import { 
     Users, LayoutDashboard, UserCircle, Clock, CalendarDays, 
     FileText, BarChart3, ChevronLeft, ChevronRight, User,
-    CheckCircle, AlertCircle, BookOpen, Wallet
+    CheckCircle, AlertCircle, BookOpen, Wallet, UserCog, ScrollText,
+    ChevronDown, LogOut, Calculator, ArrowUpDown
 } from 'lucide-vue-next';
 
 const sidebarOpen = ref(true);
+const showUserMenu = ref(false);
+const userMenuRef = ref(null);
 const page = usePage();
 
 const currentDate = computed(() => {
@@ -191,11 +267,78 @@ const currentDate = computed(() => {
     });
 });
 
+const userInitial = computed(() => {
+    return page.props.auth?.user?.name?.charAt(0)?.toUpperCase() || 'U';
+});
+
+const pageTitles = {
+    '/': { title: 'Tableau de bord', subtitle: 'Vue d\'ensemble de l\'activité' },
+    '/employes': { title: 'Employés', subtitle: 'Gestion du personnel' },
+    '/pointages': { title: 'Pointages', subtitle: 'Suivi des présences' },
+    '/pointages/rapport': { title: 'Rapports', subtitle: 'Rapports de présences' },
+    '/conges': { title: 'Congés', subtitle: 'Gestion des congés' },
+    '/fiches-paie': { title: 'Fiches de paie', subtitle: 'Bulletins de salaire' },
+    '/paies-mensuelles': { title: 'Paies mensuelles', subtitle: 'Gestion des paies' },
+    '/users': { title: 'Utilisateurs', subtitle: 'Gestion des comptes' },
+    '/activity-logs': { title: 'Journal d\'activité', subtitle: 'Historique des actions' },
+    '/guide-salaire': { title: 'Guide salaire', subtitle: 'Informations sur le système de paie' },
+    '/simulateur-salaire': { title: 'Simulateur de salaire', subtitle: 'Calcul dynamique des salaires' },
+    '/simulateur-inverse': { title: 'Simulateur inversé', subtitle: 'Calcul du brut à partir du net' },
+};
+
+const pageTitle = computed(() => {
+    const path = page.url.split('?')[0];
+    for (const [route, data] of Object.entries(pageTitles)) {
+        if (path === route || (route !== '/' && path.startsWith(route))) {
+            return data.title;
+        }
+    }
+    return 'Talentee';
+});
+
+const pageSubtitle = computed(() => {
+    const path = page.url.split('?')[0];
+    for (const [route, data] of Object.entries(pageTitles)) {
+        if (path === route || (route !== '/' && path.startsWith(route))) {
+            return data.subtitle;
+        }
+    }
+    return 'Système de gestion des ressources humaines';
+});
+
 const isActive = (path) => {
-    const currentPath = page.url;
+    const currentPath = page.url.split('?')[0];
     if (path === '/') {
         return currentPath === '/';
     }
     return currentPath.startsWith(path);
 };
+
+const isActiveExact = (path) => {
+    const currentPath = page.url.split('?')[0];
+    // For /pointages, match /pointages and /pointages/* but NOT /pointages/rapport/*
+    if (path === '/pointages') {
+        return currentPath === '/pointages' || 
+               (currentPath.startsWith('/pointages/') && !currentPath.startsWith('/pointages/rapport'));
+    }
+    return currentPath === path || currentPath.startsWith(path + '/');
+};
+
+const logout = () => {
+    router.post('/logout');
+};
+
+const handleClickOutside = (event) => {
+    if (userMenuRef.value && !userMenuRef.value.contains(event.target)) {
+        showUserMenu.value = false;
+    }
+};
+
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
+});
 </script>

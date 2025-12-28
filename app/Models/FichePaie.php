@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\TracksUserActions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class FichePaie extends Model
 {
-    use HasFactory;
+    use HasFactory, TracksUserActions;
 
     protected $table = 'fiches_paie';
 

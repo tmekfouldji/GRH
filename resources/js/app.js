@@ -4,11 +4,14 @@ import { createInertiaApp, Link, Head } from '@inertiajs/vue3';
 import Layout from './Layouts/AppLayout.vue';
 
 createInertiaApp({
-    title: (title) => title ? `${title} - GRH Textile` : 'GRH Textile',
+    title: (title) => title ? `${title} - Talentee` : 'Talentee',
     resolve: (name) => {
         const pages = import.meta.glob('./Pages/**/*.vue', { eager: true });
         let page = pages[`./Pages/${name}.vue`];
-        page.default.layout = page.default.layout || Layout;
+        // Don't apply layout to Auth pages (Login, etc.)
+        if (!name.startsWith('Auth/')) {
+            page.default.layout = page.default.layout || Layout;
+        }
         return page;
     },
     setup({ el, App, props, plugin }) {
