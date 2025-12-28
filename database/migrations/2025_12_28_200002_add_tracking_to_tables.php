@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $tables = ['employes', 'pointages', 'conges', 'fiche_paies', 'paie_mensuelles'];
+        $tables = ['employes', 'pointages', 'conges', 'fiches_paie', 'paies_mensuelles'];
         
         foreach ($tables as $tableName) {
             if (Schema::hasTable($tableName)) {
@@ -26,17 +26,17 @@ return new class extends Migration
 
     public function down(): void
     {
-        $tables = ['employes', 'pointages', 'conges', 'fiche_paies', 'paie_mensuelles'];
+        $tables = ['employes', 'pointages', 'conges', 'fiches_paie', 'paies_mensuelles'];
         
         foreach ($tables as $tableName) {
             if (Schema::hasTable($tableName)) {
                 Schema::table($tableName, function (Blueprint $table) use ($tableName) {
                     if (Schema::hasColumn($tableName, 'created_by')) {
-                        $table->dropForeign([$tableName . '_created_by_foreign']);
+                        $table->dropForeign(['created_by']);
                         $table->dropColumn('created_by');
                     }
                     if (Schema::hasColumn($tableName, 'updated_by')) {
-                        $table->dropForeign([$tableName . '_updated_by_foreign']);
+                        $table->dropForeign(['updated_by']);
                         $table->dropColumn('updated_by');
                     }
                 });
