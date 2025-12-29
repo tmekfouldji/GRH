@@ -94,13 +94,11 @@ class Employe extends Model
     }
 
     /**
-     * Calculer la prime d'ancienneté selon la législation algérienne
-     * 1% du salaire de base par année d'ancienneté (plafonné à 25%)
+     * Prime d'ancienneté (désactivée - toujours 0)
      */
     public function getPrimeAncienneteAttribute()
     {
-        $taux = min($this->anciennete * 0.01, 0.25);
-        return round($this->salaire_base * $taux, 2);
+        return 0;
     }
 
     /**
@@ -125,12 +123,11 @@ class Employe extends Model
     public function calculerSalairePreview($primes_supplementaires = 0)
     {
         $salaire_base = $this->salaire_base ?? 0;
-        $prime_anciennete = $this->prime_anciennete;
         $prime_transport = $this->prime_transport_defaut ?? 0;
         $prime_panier = $this->prime_panier_defaut ?? 0;
         
-        // Salaire brut
-        $salaire_brut = $salaire_base + $prime_anciennete + $prime_transport + $prime_panier + $primes_supplementaires;
+        // Salaire brut (sans prime d'ancienneté)
+        $salaire_brut = $salaire_base + $prime_transport + $prime_panier + $primes_supplementaires;
         
         // CNAS 9%
         $cotisation_cnas = $salaire_brut * 0.09;
@@ -146,7 +143,6 @@ class Employe extends Model
         
         return [
             'salaire_base' => round($salaire_base, 2),
-            'prime_anciennete' => round($prime_anciennete, 2),
             'prime_transport' => round($prime_transport, 2),
             'prime_panier' => round($prime_panier, 2),
             'salaire_brut' => round($salaire_brut, 2),
@@ -190,14 +186,18 @@ class Employe extends Model
             'salaire_base' => $this->salaire_base ?? 0,
             'heures_normales' => $heures_normales,
             'heures_supplementaires' => $heures_sup,
-            'prime_anciennete' => $this->prime_anciennete,
+            'prime_anciennete' => 0,
             'prime_rendement' => $options['prime_rendement'] ?? 0,
             'prime_transport' => $this->prime_transport_defaut ?? 0,
             'autres_primes' => ($this->prime_panier_defaut ?? 0) + ($options['autres_primes'] ?? 0),
             'autres_deductions' => $options['autres_deductions'] ?? 0,
         ]);
 
+        // Calculate presences from pointages for this specific month/year
+        $fichePaie->calculerPresences();
+        // Calculate salary based on presence ratio
         $fichePaie->calculerSalaire();
+        // Now save with all calculated values
         $fichePaie->save();
 
         return $fichePaie;

@@ -56,10 +56,6 @@
                             <span class="text-gray-600">Salaire de base</span>
                             <span class="font-medium">{{ formatMoney(fichePaie.salaire_base) }}</span>
                         </div>
-                        <div v-if="fichePaie.prime_anciennete > 0" class="flex justify-between">
-                            <span class="text-gray-600">Prime d'ancienneté</span>
-                            <span class="font-medium">{{ formatMoney(fichePaie.prime_anciennete) }}</span>
-                        </div>
                         <div v-if="fichePaie.prime_rendement > 0" class="flex justify-between">
                             <span class="text-gray-600">Prime de rendement</span>
                             <span class="font-medium">{{ formatMoney(fichePaie.prime_rendement) }}</span>

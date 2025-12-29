@@ -5,15 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fiches de Paie - {{ $paie->periode }}</title>
     <style>
+        @page {
+            size: A5 portrait;
+            margin: 5mm;
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; }
+        body { font-family: Arial, sans-serif; font-size: 8px; line-height: 1.3; }
         
         .fiche-paie {
-            width: 100%;
-            max-width: 210mm;
+            width: 148mm;
+            height: 210mm;
             margin: 0 auto;
-            padding: 15mm;
+            padding: 5mm;
             page-break-after: always;
+            overflow: hidden;
         }
         .fiche-paie:last-child { page-break-after: auto; }
         
@@ -21,53 +27,60 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
+            border-bottom: 1.5px solid #333;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
         }
-        .company-info h1 { font-size: 18px; color: #1e40af; margin-bottom: 5px; }
-        .company-info p { color: #666; font-size: 10px; }
+        .company-info h1 { font-size: 12px; color: #1e40af; margin-bottom: 2px; }
+        .company-info p { color: #666; font-size: 7px; }
         .fiche-info { text-align: right; }
-        .fiche-info h2 { font-size: 14px; color: #333; }
-        .fiche-info p { font-size: 10px; color: #666; }
+        .fiche-info h2 { font-size: 10px; color: #333; }
+        .fiche-info p { font-size: 7px; color: #666; }
         
         .employee-section {
             background: #f8fafc;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
+            padding: 6px;
+            border-radius: 3px;
+            margin-bottom: 8px;
         }
-        .employee-section h3 { font-size: 12px; color: #1e40af; margin-bottom: 8px; }
-        .employee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .employee-section h3 { font-size: 8px; color: #1e40af; margin-bottom: 4px; }
+        .employee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 7px; }
         .employee-grid div { display: flex; justify-content: space-between; }
         .employee-grid span:first-child { color: #666; }
         .employee-grid span:last-child { font-weight: bold; }
         
-        .salary-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .salary-table th, .salary-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-        .salary-table th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; color: #64748b; }
+        .salary-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 7px; }
+        .salary-table th, .salary-table td { padding: 3px 5px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .salary-table th { background: #f1f5f9; font-size: 7px; text-transform: uppercase; color: #64748b; }
         .salary-table .amount { text-align: right; font-family: monospace; }
         .salary-table .gain { color: #16a34a; }
         .salary-table .deduction { color: #dc2626; }
         .salary-table .subtotal { background: #f8fafc; font-weight: bold; }
-        .salary-table .total { background: #1e40af; color: white; font-weight: bold; font-size: 13px; }
+        .salary-table .total { background: #1e40af; color: white; font-weight: bold; font-size: 9px; }
         
         .signature-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-top: 20px;
-            padding-top: 15px;
+            gap: 15px;
+            margin-top: 10px;
+            padding-top: 8px;
             border-top: 1px solid #e5e7eb;
         }
         .signature-box { text-align: center; }
-        .signature-box p { font-size: 10px; color: #666; margin-bottom: 40px; }
-        .signature-line { border-top: 1px solid #333; padding-top: 5px; font-size: 9px; }
+        .signature-box p { font-size: 7px; color: #666; margin-bottom: 20px; }
+        .signature-line { border-top: 1px solid #333; padding-top: 3px; font-size: 6px; }
         
         @media print {
             body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            .fiche-paie { padding: 10mm; }
+            .fiche-paie { padding: 5mm; }
             .no-print { display: none; }
+        }
+        
+        @media screen {
+            .fiche-paie {
+                border: 1px dashed #ccc;
+                margin-bottom: 10px;
+            }
         }
         
         .print-controls {
@@ -125,12 +138,6 @@
                     <td>Salaire de base</td>
                     <td class="amount">{{ number_format($fiche->salaire_base, 2, ',', ' ') }}</td>
                 </tr>
-                @if($fiche->prime_anciennete > 0)
-                <tr>
-                    <td>Prime d'ancienneté</td>
-                    <td class="amount gain">+ {{ number_format($fiche->prime_anciennete, 2, ',', ' ') }}</td>
-                </tr>
-                @endif
                 @if($fiche->prime_transport > 0)
                 <tr>
                     <td>Prime de transport</td>

@@ -234,12 +234,14 @@ class PaieMensuelleController extends Controller
         // Calculer les présences si pas encore fait
         if ($fichePaie->jours_travailles == 0 && $fichePaie->jours_absence == 0) {
             $fichePaie->calculerPresences();
+            $fichePaie->calculerSalaire();
             $fichePaie->save();
         }
 
         return Inertia::render('PaiesMensuelles/ValidationPresences', [
             'fiche' => $fichePaie,
             'pointages' => $pointages,
+            'joursOuvres' => $fichePaie->getJoursOuvresDuMois(),
         ]);
     }
 
@@ -291,18 +293,21 @@ class PaieMensuelleController extends Controller
     }
 
     /**
-     * Calculer les présences pour toutes les fiches
+     * Calculer les présences pour toutes les fiches et recalculer les salaires
      */
     public function calculerToutesPresences(PaieMensuelle $paiesMensuelle)
     {
         $paiesMensuelle->fichesPaie()->each(function ($fiche) {
+            // Calculer les présences depuis les pointages
             $fiche->calculerPresences();
+            // Recalculer le salaire basé sur les présences
+            $fiche->calculerSalaire();
             $fiche->save();
         });
 
         $paiesMensuelle->recalculerTotaux();
 
-        return redirect()->back()->with('success', 'Présences calculées pour tous les employés.');
+        return redirect()->back()->with('success', 'Présences et salaires calculés pour tous les employés.');
     }
 
     /**

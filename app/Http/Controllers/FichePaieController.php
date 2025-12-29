@@ -60,9 +60,9 @@ class FichePaieController extends Controller
             'employe_id' => 'required|exists:employes,id',
             'mois' => 'required|integer|min:1|max:12',
             'annee' => 'required|integer|min:2020|max:2100',
-            'prime_anciennete' => 'nullable|numeric|min:0',
-            'prime_rendement' => 'nullable|numeric|min:0',
             'prime_transport' => 'nullable|numeric|min:0',
+            'prime_panier' => 'nullable|numeric|min:0',
+            'prime_rendement' => 'nullable|numeric|min:0',
             'autres_primes' => 'nullable|numeric|min:0',
             'autres_deductions' => 'nullable|numeric|min:0',
         ]);
@@ -85,10 +85,10 @@ class FichePaieController extends Controller
             'salaire_base' => $employe->salaire_base,
             'heures_normales' => $heures_normales,
             'heures_supplementaires' => $heures_sup,
-            'prime_anciennete' => $validated['prime_anciennete'] ?? 0,
+            'prime_anciennete' => 0,
             'prime_rendement' => $validated['prime_rendement'] ?? 0,
             'prime_transport' => $validated['prime_transport'] ?? 0,
-            'autres_primes' => $validated['autres_primes'] ?? 0,
+            'autres_primes' => ($validated['prime_panier'] ?? 0) + ($validated['autres_primes'] ?? 0),
             'autres_deductions' => $validated['autres_deductions'] ?? 0,
         ]);
 
@@ -115,7 +115,6 @@ class FichePaieController extends Controller
     {
         $validated = $request->validate([
             'salaire_base' => 'required|numeric|min:0',
-            'prime_anciennete' => 'nullable|numeric|min:0',
             'prime_rendement' => 'nullable|numeric|min:0',
             'prime_transport' => 'nullable|numeric|min:0',
             'autres_primes' => 'nullable|numeric|min:0',

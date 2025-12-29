@@ -67,8 +67,8 @@
                 <p class="text-xl font-bold text-orange-600">{{ formatMoney(paie.total_irg) }}</p>
             </div>
             <div class="card text-center">
-                <p class="text-xs text-gray-500 uppercase">Total Net</p>
-                <p class="text-xl font-bold text-green-600">{{ formatMoney(paie.total_net) }}</p>
+                <p class="text-xs text-gray-500 uppercase">Total Net à Payer</p>
+                <p class="text-xl font-bold text-green-600">{{ formatMoney(totalNetAPayer) }}</p>
             </div>
             <div class="card text-center bg-orange-50">
                 <p class="text-xs text-orange-600 uppercase">Coût Employeur</p>
@@ -199,6 +199,7 @@
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Présences</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Brut</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net à Payer</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Validation</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Remise</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -219,7 +220,8 @@
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-right font-medium">{{ formatMoney(fiche.salaire_brut) }}</td>
-                            <td class="px-4 py-3 text-right font-bold text-green-600">{{ formatMoney(fiche.salaire_net) }}</td>
+                            <td class="px-4 py-3 text-right text-gray-600">{{ formatMoney(fiche.salaire_net) }}</td>
+                            <td class="px-4 py-3 text-right font-bold text-green-600">{{ formatMoney(fiche.net_a_payer) }}</td>
                             <td class="px-4 py-3 text-center">
                                 <span :class="getValidationClass(fiche.statut_validation)" class="px-2 py-1 text-xs rounded-full">
                                     {{ fiche.statut_validation_label }}
@@ -301,6 +303,11 @@ const validationStats = computed(() => {
         valide: fiches.filter(f => f.statut_validation === 'valide').length,
         ajuste: fiches.filter(f => f.statut_validation === 'ajuste').length,
     };
+});
+
+const totalNetAPayer = computed(() => {
+    const fiches = props.paie.fiches_paie || [];
+    return fiches.reduce((sum, f) => sum + (parseFloat(f.net_a_payer) || 0), 0);
 });
 
 const getValidationClass = (statut) => ({

@@ -21,16 +21,16 @@
                     <h3 class="text-sm font-medium text-gray-700 mb-3">Primes</h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">Prime d'ancienneté</label>
-                            <input v-model="form.prime_anciennete" type="number" step="0.01" class="input" />
-                        </div>
-                        <div>
                             <label class="block text-sm text-gray-600 mb-1">Prime de rendement</label>
                             <input v-model="form.prime_rendement" type="number" step="0.01" class="input" />
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Prime de transport</label>
                             <input v-model="form.prime_transport" type="number" step="0.01" class="input" />
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Prime panier</label>
+                            <input v-model="form.prime_panier" type="number" step="0.01" class="input" />
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Autres primes</label>
@@ -78,9 +78,9 @@ const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juille
 
 const form = useForm({
     salaire_base: props.fichePaie.salaire_base,
-    prime_anciennete: props.fichePaie.prime_anciennete || 0,
     prime_rendement: props.fichePaie.prime_rendement || 0,
     prime_transport: props.fichePaie.prime_transport || 0,
+    prime_panier: props.fichePaie.prime_panier || 0,
     autres_primes: props.fichePaie.autres_primes || 0,
     autres_deductions: props.fichePaie.autres_deductions || 0,
     statut: props.fichePaie.statut,

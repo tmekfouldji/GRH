@@ -49,19 +49,20 @@
             <table class="w-full">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom complet</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Poste</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Département</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salaire</th>
-                        <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matricule</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom complet</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Poste</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Salaire Base</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Primes</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Salaire Net</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     <tr v-for="employe in employes.data" :key="employe.id" class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ employe.matricule }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ employe.matricule }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
                             <div class="flex items-center">
                                 <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                                     <span class="text-blue-600 font-medium text-sm">{{ employe.prenom[0] }}{{ employe.nom[0] }}</span>
@@ -72,15 +73,22 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ employe.poste || '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ employe.departement || '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{{ employe.poste || '-' }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
                             <span :class="getStatutClass(employe.statut)" class="px-2 py-1 text-xs rounded-full font-medium">
                                 {{ getStatutLabel(employe.statut) }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ formatMoney(employe.salaire_base) }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">{{ formatNumber(employe.salaire_base) }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-right">
+                            <div class="text-xs text-gray-500">
+                                <span v-if="employe.prime_transport_defaut" class="block">Transport: {{ formatNumber(employe.prime_transport_defaut) }}</span>
+                                <span v-if="employe.prime_panier_defaut" class="block">Panier: {{ formatNumber(employe.prime_panier_defaut) }}</span>
+                                <span v-if="!employe.prime_transport_defaut && !employe.prime_panier_defaut">-</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-bold text-green-600">{{ formatNumber(getSalaireNet(employe)) }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-right text-sm space-x-2">
                             <Link :href="`/employes/${employe.id}`" class="text-blue-600 hover:text-blue-900">
                                 <Eye class="w-4 h-4 inline" />
                             </Link>
@@ -93,7 +101,7 @@
                         </td>
                     </tr>
                     <tr v-if="employes.data.length === 0">
-                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                        <td colspan="8" class="px-4 py-12 text-center text-gray-500">
                             Aucun employé trouvé
                         </td>
                     </tr>
@@ -102,18 +110,31 @@
         </div>
         
         <!-- Pagination -->
-        <div v-if="employes.last_page > 1" class="flex justify-center gap-2">
-            <Link 
-                v-for="link in employes.links" 
-                :key="link.label"
-                :href="link.url || '#'"
-                :class="[
-                    'px-3 py-2 text-sm rounded-lg',
-                    link.active ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100',
-                    !link.url && 'opacity-50 cursor-not-allowed'
-                ]"
-                v-html="link.label"
-            />
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-600">Afficher</span>
+                <select v-model="searchForm.per_page" @change="search" class="input w-auto text-sm py-1">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">Tout</option>
+                </select>
+                <span class="text-sm text-gray-600">sur {{ employes.total }} employé(s)</span>
+            </div>
+            <div v-if="employes.last_page > 1" class="flex gap-2">
+                <Link 
+                    v-for="link in employes.links" 
+                    :key="link.label"
+                    :href="link.url ? link.url + '&per_page=' + searchForm.per_page : '#'"
+                    :class="[
+                        'px-3 py-2 text-sm rounded-lg',
+                        link.active ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100',
+                        !link.url && 'opacity-50 cursor-not-allowed'
+                    ]"
+                    v-html="link.label"
+                />
+            </div>
         </div>
     </div>
     
@@ -137,6 +158,7 @@
 import { ref, reactive } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { Plus, Search, Eye, Pencil, Trash2 } from 'lucide-vue-next';
+import { calculateFromBrut } from '@/utils/salaryCalculator';
 
 const props = defineProps({
     employes: Object,
@@ -148,6 +170,7 @@ const searchForm = reactive({
     search: props.filters?.search || '',
     statut: props.filters?.statut || '',
     departement: props.filters?.departement || '',
+    per_page: props.filters?.per_page || '25',
 });
 
 const showDeleteModal = ref(false);
@@ -178,8 +201,20 @@ const deleteEmploye = () => {
     });
 };
 
-const formatMoney = (value) => {
-    return new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD' }).format(value || 0);
+const formatNumber = (value) => {
+    return new Intl.NumberFormat('fr-DZ').format(Math.round(value || 0));
+};
+
+const getSalaireNet = (employe) => {
+    const base = parseFloat(employe.salaire_base) || 0;
+    const transport = parseFloat(employe.prime_transport_defaut) || 0;
+    const panier = parseFloat(employe.prime_panier_defaut) || 0;
+    
+    const result = calculateFromBrut(base, {
+        primeTransport: transport,
+        primePanier: panier,
+    });
+    return result.salaireNet;
 };
 
 const getStatutClass = (statut) => {

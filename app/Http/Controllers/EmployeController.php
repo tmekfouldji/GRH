@@ -30,13 +30,27 @@ class EmployeController extends Controller
             $query->where('departement', $request->departement);
         }
 
-        $employes = $query->orderBy('nom')->paginate(15);
+        // Handle per_page parameter
+        $perPage = $request->input('per_page', 25);
+        if ($perPage === 'all') {
+            $employes = $query->orderBy('nom')->get();
+            // Wrap in pagination-like structure for frontend compatibility
+            $employes = [
+                'data' => $employes,
+                'total' => $employes->count(),
+                'last_page' => 1,
+                'links' => [],
+            ];
+        } else {
+            $employes = $query->orderBy('nom')->paginate((int) $perPage);
+        }
+        
         $departements = Employe::distinct()->pluck('departement')->filter();
 
         return Inertia::render('Employes/Index', [
             'employes' => $employes,
             'departements' => $departements,
-            'filters' => $request->only(['search', 'statut', 'departement']),
+            'filters' => $request->only(['search', 'statut', 'departement', 'per_page']),
         ]);
     }
 

@@ -144,6 +144,9 @@ class PaieMensuelle extends Model
             if ($ficheExistante) {
                 // Lier la fiche existante à cette paie
                 $ficheExistante->paie_mensuelle_id = $paie->id;
+                // Recalculate presences and salary for this specific month
+                $ficheExistante->calculerPresences();
+                $ficheExistante->calculerSalaire();
                 $ficheExistante->save();
                 $count++;
             } else {

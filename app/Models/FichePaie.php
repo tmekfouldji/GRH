@@ -68,7 +68,7 @@ class FichePaie extends Model
         'ajustement_heures' => 'decimal:2',
     ];
 
-    protected $appends = ['statut_validation_label'];
+    protected $appends = ['statut_validation_label', 'net_a_payer', 'ratio_presence'];
 
     public function paieMensuelle()
     {
@@ -113,26 +113,48 @@ class FichePaie extends Model
 
     /**
      * Récupérer les pointages du mois pour cet employé
+     * Only returns pointages for this fiche's specific month and year
      */
     public function getPointagesDuMois()
     {
+        // Use explicit date range to ensure correct month filtering
+        $startDate = \Carbon\Carbon::create((int) $this->annee, (int) $this->mois, 1)->startOfDay();
+        $endDate = $startDate->copy()->endOfMonth()->endOfDay();
+        
         return Pointage::where('employe_id', $this->employe_id)
-            ->whereMonth('date_pointage', $this->mois)
-            ->whereYear('date_pointage', $this->annee)
+            ->whereBetween('date_pointage', [$startDate, $endDate])
             ->orderBy('date_pointage')
             ->get();
     }
 
     /**
      * Calculer le résumé des présences depuis les pointages
+     * Weekends en Algérie: Vendredi et Samedi
+     * Jours ouvrés: Dimanche à Jeudi
      */
     public function calculerPresences()
     {
         $pointages = $this->getPointagesDuMois();
         
-        $jours_travailles = $pointages->where('statut', 'present')->count();
-        $jours_absence = $pointages->where('statut', 'absent')->count();
-        $jours_justifies = $pointages->whereIn('statut', ['conge', 'maladie', 'mission'])->count();
+        // Compter les jours avec au moins un pointage (présence)
+        $datesAvecPointage = $pointages->pluck('date_pointage')
+            ->map(fn($d) => \Carbon\Carbon::parse($d)->format('Y-m-d'))
+            ->unique();
+        
+        $jours_travailles = $datesAvecPointage->count();
+        
+        // Calculer le nombre de jours ouvrés dans le mois (Dim-Jeu)
+        $jours_ouvres = $this->getJoursOuvresDuMois();
+        
+        // Absences = jours ouvrés - jours travaillés
+        $jours_absence = max(0, $jours_ouvres - $jours_travailles);
+        
+        // Jours justifiés (congés, maladie, mission)
+        $jours_justifies = $pointages->whereIn('statut', ['conge', 'maladie', 'mission'])
+            ->pluck('date_pointage')
+            ->map(fn($d) => \Carbon\Carbon::parse($d)->format('Y-m-d'))
+            ->unique()
+            ->count();
         
         $heures_normales = $pointages->sum('heures_travaillees');
         $heures_supplementaires = $pointages->sum('heures_supplementaires');
@@ -144,6 +166,32 @@ class FichePaie extends Model
         $this->heures_supplementaires = $heures_supplementaires;
         
         return $this;
+    }
+
+    /**
+     * Calculer le nombre de jours ouvrés dans le mois
+     * Weekends algériens: Vendredi (5) et Samedi (6)
+     * Jours ouvrés: Dimanche (0), Lundi (1), Mardi (2), Mercredi (3), Jeudi (4)
+     */
+    public function getJoursOuvresDuMois()
+    {
+        $debut = \Carbon\Carbon::create((int) $this->annee, (int) $this->mois, 1);
+        $fin = $debut->copy()->endOfMonth();
+        
+        $jours_ouvres = 0;
+        $current = $debut->copy();
+        
+        while ($current <= $fin) {
+            // 0=Dimanche, 1=Lundi, 2=Mardi, 3=Mercredi, 4=Jeudi (jours ouvrés)
+            // 5=Vendredi, 6=Samedi (weekend)
+            $dayOfWeek = $current->dayOfWeek;
+            if ($dayOfWeek >= 0 && $dayOfWeek <= 4) {
+                $jours_ouvres++;
+            }
+            $current->addDay();
+        }
+        
+        return $jours_ouvres;
     }
 
     /**
@@ -196,7 +244,35 @@ class FichePaie extends Model
     }
 
     /**
+     * Get ratio de présence (jours payés / jours ouvrés)
+     */
+    public function getRatioPresenceAttribute()
+    {
+        $jours_ouvres = $this->getJoursOuvresDuMois();
+        $jours_travailles = $this->jours_travailles ?? 0;
+        $jours_justifies = $this->jours_justifies ?? 0;
+        $jours_payes = $jours_travailles + $jours_justifies;
+        
+        if ($jours_ouvres == 0) {
+            $jours_ouvres = 22;
+        }
+        
+        return min(1, $jours_payes / $jours_ouvres);
+    }
+
+    /**
+     * Get net à payer (salaire net proraté selon présences)
+     */
+    public function getNetAPayerAttribute()
+    {
+        $ratio = $this->ratio_presence;
+        return round($this->salaire_net * $ratio, 2);
+    }
+
+    /**
      * Calculer les cotisations et le salaire net selon la législation algérienne
+     * Calcule le salaire COMPLET du mois (sans prorata)
+     * Le prorata est appliqué via net_a_payer
      * 
      * Références:
      * - CNAS: 9% cotisation salariale (25% patronale non déduite du salaire)
@@ -204,16 +280,15 @@ class FichePaie extends Model
      */
     public function calculerSalaire()
     {
-        // Total des primes
+        // Total des primes (valeur complète du mois)
         $total_primes = $this->prime_anciennete + $this->prime_rendement + 
                         $this->prime_transport + $this->autres_primes;
         
-        // Salaire brut = salaire de base + primes
-        $this->salaire_brut = $this->salaire_base + $total_primes;
+        // Salaire brut = salaire de base + primes (mois complet)
+        $this->salaire_brut = round($this->salaire_base + $total_primes, 2);
         
         // Cotisation CNAS salariale: 9% du salaire brut
-        // (la cotisation patronale de 25% n'est pas déduite du salaire de l'employé)
-        $this->cotisation_cnss = $this->salaire_brut * 0.09;
+        $this->cotisation_cnss = round($this->salaire_brut * 0.09, 2);
         
         // Pas de cotisation AMO séparée en Algérie (incluse dans CNAS)
         $this->cotisation_amo = 0;
@@ -225,11 +300,11 @@ class FichePaie extends Model
         $this->ir = $this->calculerIRG($salaire_imposable);
         
         // Total déductions
-        $this->total_deductions = $this->cotisation_cnss + $this->cotisation_amo + 
-                                  $this->ir + $this->autres_deductions;
+        $this->total_deductions = round($this->cotisation_cnss + $this->cotisation_amo + 
+                                  $this->ir + $this->autres_deductions, 2);
         
-        // Salaire net à payer
-        $this->salaire_net = $this->salaire_brut - $this->total_deductions;
+        // Salaire net (mois complet) - le prorata est dans net_a_payer
+        $this->salaire_net = round($this->salaire_brut - $this->total_deductions, 2);
         
         return $this;
     }

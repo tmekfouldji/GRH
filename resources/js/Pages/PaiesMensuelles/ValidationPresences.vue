@@ -19,10 +19,16 @@
         </div>
         
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div class="card text-center">
+                <p class="text-xs text-gray-500 uppercase">Jours Ouvrés</p>
+                <p class="text-2xl font-bold text-gray-800">{{ joursOuvres }}</p>
+                <p class="text-xs text-gray-400">Dim-Jeu</p>
+            </div>
             <div class="card text-center">
                 <p class="text-xs text-gray-500 uppercase">Jours Travaillés</p>
                 <p class="text-2xl font-bold text-green-600">{{ fiche.jours_travailles }}</p>
+                <p class="text-xs text-gray-400">avec pointage</p>
             </div>
             <div class="card text-center">
                 <p class="text-xs text-gray-500 uppercase">Absences</p>
@@ -39,6 +45,33 @@
             <div class="card text-center">
                 <p class="text-xs text-gray-500 uppercase">Heures Sup.</p>
                 <p class="text-2xl font-bold text-purple-600">{{ fiche.heures_supplementaires }}h</p>
+            </div>
+        </div>
+        
+        <!-- Salary Calculation Info -->
+        <div class="card bg-blue-50 border-blue-200">
+            <div class="flex items-center gap-3 mb-3">
+                <Calculator class="w-5 h-5 text-blue-600" />
+                <h3 class="font-semibold text-blue-800">Calcul du Salaire</h3>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <p class="text-blue-600">Salaire de base</p>
+                    <p class="font-bold">{{ formatMoney(fiche.salaire_base) }} DZD</p>
+                </div>
+                <div>
+                    <p class="text-blue-600">Ratio présence</p>
+                    <p class="font-bold">{{ ratioPresence }}%</p>
+                    <p class="text-xs text-blue-500">({{ fiche.jours_travailles + fiche.jours_justifies }}/{{ joursOuvres }} jours)</p>
+                </div>
+                <div>
+                    <p class="text-blue-600">Salaire brut calculé</p>
+                    <p class="font-bold">{{ formatMoney(fiche.salaire_brut) }} DZD</p>
+                </div>
+                <div>
+                    <p class="text-green-600">Salaire net</p>
+                    <p class="font-bold text-green-700">{{ formatMoney(fiche.salaire_net) }} DZD</p>
+                </div>
             </div>
         </div>
         
@@ -256,16 +289,32 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, CheckCircle, Edit, Loader2, AlertTriangle, Calendar, Pencil, RotateCcw } from 'lucide-vue-next';
+import { ArrowLeft, CheckCircle, Edit, Loader2, AlertTriangle, Calendar, Pencil, RotateCcw, Calculator } from 'lucide-vue-next';
 
 const props = defineProps({
     fiche: Object,
     pointages: Array,
+    joursOuvres: {
+        type: Number,
+        default: 22,
+    },
 });
 
 const processing = ref(false);
+
+const joursOuvres = computed(() => props.joursOuvres || 22);
+
+const ratioPresence = computed(() => {
+    const jours_payes = (props.fiche.jours_travailles || 0) + (props.fiche.jours_justifies || 0);
+    const total = joursOuvres.value || 22;
+    return Math.round((jours_payes / total) * 100);
+});
+
+const formatMoney = (val) => {
+    return new Intl.NumberFormat('fr-DZ').format(Math.round(val || 0));
+};
 
 const validationForm = reactive({
     notes: '',

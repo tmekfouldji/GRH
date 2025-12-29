@@ -231,14 +231,14 @@
     
     <!-- Liste des employés -->
     <div class="section">
-        <h3 class="section-title">👥 Détail par Employé</h3>
+        <h3 class="section-title">👥 Détail par Employé (Calcul basé sur les présences)</h3>
         <table>
             <thead>
                 <tr>
                     <th>Matricule</th>
                     <th>Nom & Prénom</th>
+                    <th class="text-center">Présences</th>
                     <th class="text-right">Base</th>
-                    <th class="text-right">Primes</th>
                     <th class="text-right">Brut</th>
                     <th class="text-right">CNAS</th>
                     <th class="text-right">IRG</th>
@@ -248,11 +248,19 @@
             </thead>
             <tbody>
                 @foreach($paie->fichesPaie as $fiche)
+                @php
+                    $joursOuvres = $fiche->getJoursOuvresDuMois();
+                    $joursPayes = $fiche->jours_travailles + $fiche->jours_justifies;
+                @endphp
                 <tr>
                     <td>{{ $fiche->employe->matricule }}</td>
                     <td>{{ $fiche->employe->prenom }} {{ $fiche->employe->nom }}</td>
+                    <td class="text-center">
+                        <span class="{{ $joursPayes < $joursOuvres ? 'text-red' : 'text-green' }}">
+                            {{ $joursPayes }}/{{ $joursOuvres }}j
+                        </span>
+                    </td>
                     <td class="text-right">{{ number_format($fiche->salaire_base, 0, ',', ' ') }}</td>
-                    <td class="text-right text-green">{{ number_format($fiche->prime_anciennete + $fiche->prime_transport + $fiche->prime_rendement + $fiche->autres_primes, 0, ',', ' ') }}</td>
                     <td class="text-right font-bold">{{ number_format($fiche->salaire_brut, 0, ',', ' ') }}</td>
                     <td class="text-right text-red">{{ number_format($fiche->cotisation_cnss, 0, ',', ' ') }}</td>
                     <td class="text-right text-red">{{ number_format($fiche->ir, 0, ',', ' ') }}</td>
@@ -267,9 +275,8 @@
             </tbody>
             <tfoot>
                 <tr class="totals-row">
-                    <td colspan="2"><strong>TOTAUX</strong></td>
+                    <td colspan="3"><strong>TOTAUX</strong></td>
                     <td class="text-right">{{ number_format($paie->total_salaires_base, 0, ',', ' ') }}</td>
-                    <td class="text-right text-green">{{ number_format($paie->total_primes, 0, ',', ' ') }}</td>
                     <td class="text-right font-bold">{{ number_format($paie->total_brut, 0, ',', ' ') }}</td>
                     <td class="text-right text-red">{{ number_format($paie->total_cotisations_cnas, 0, ',', ' ') }}</td>
                     <td class="text-right text-red">{{ number_format($paie->total_irg, 0, ',', ' ') }}</td>
@@ -278,6 +285,9 @@
                 </tr>
             </tfoot>
         </table>
+        <p style="margin-top: 10px; font-size: 9px; color: #666;">
+            * Présences: jours travaillés + justifiés / jours ouvrés du mois (Dim-Jeu). Salaire calculé au prorata des présences.
+        </p>
     </div>
     
     <!-- Signatures -->

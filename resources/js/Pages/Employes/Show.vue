@@ -95,10 +95,6 @@
                                     <span class="text-gray-600">Salaire de base</span>
                                     <span class="font-medium">{{ formatMoney(employe.salaire_base) }}</span>
                                 </div>
-                                <div v-if="employe.salaire_preview" class="flex justify-between text-green-600">
-                                    <span>Prime d'ancienneté ({{ employe.anciennete }}%)</span>
-                                    <span class="font-medium">+{{ formatMoney(getSalairePreview('prime_anciennete')) }}</span>
-                                </div>
                                 <div v-if="employe.prime_transport_defaut > 0" class="flex justify-between text-green-600">
                                     <span>Prime transport</span>
                                     <span class="font-medium">+{{ formatMoney(employe.prime_transport_defaut) }}</span>

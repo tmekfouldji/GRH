@@ -248,12 +248,6 @@
                     <td>Salaire de base</td>
                     <td class="amount">{{ number_format($fichesPaie->salaire_base, 2, ',', ' ') }}</td>
                 </tr>
-                @if($fichesPaie->prime_anciennete > 0)
-                <tr>
-                    <td>Prime d'ancienneté</td>
-                    <td class="amount">{{ number_format($fichesPaie->prime_anciennete, 2, ',', ' ') }}</td>
-                </tr>
-                @endif
                 @if($fichesPaie->prime_rendement > 0)
                 <tr>
                     <td>Prime de rendement</td>

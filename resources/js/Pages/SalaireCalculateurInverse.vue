@@ -42,19 +42,6 @@
                             <h3 class="text-sm font-medium text-gray-700 mb-3">Options supplémentaires</h3>
                             
                             <div class="space-y-3">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Ancienneté (années)</label>
-                                    <input 
-                                        v-model.number="anciennete" 
-                                        type="number" 
-                                        min="0"
-                                        max="30"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
-                                        placeholder="0"
-                                    />
-                                    <p class="mt-1 text-xs text-gray-500">Prime: {{ Math.min(anciennete, 25) }}%</p>
-                                </div>
-
                                 <div class="flex items-center gap-2">
                                     <input 
                                         v-model="inclurePrimeTransport" 
@@ -315,89 +302,14 @@
 import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Calculator, ArrowUpDown, ArrowRight, Building, CheckCircle, Info } from 'lucide-vue-next';
+import { calculateFromNet, calculateEmployerCost } from '@/utils/salaryCalculator';
 
 // Input values
 const salaireNetSouhaite = ref(40000);
-const anciennete = ref(0);
 const inclurePrimeTransport = ref(false);
 const inclurePrimePanier = ref(false);
 
-// Helper function to calculate IRG from SNI
-const calculateIRG = (sniVal) => {
-    if (sniVal <= 30000) return 0;
-    
-    if (sniVal <= 35000) {
-        const depassement = sniVal - 30000;
-        return Math.round(depassement * 0.2);
-    }
-    
-    let irgBrut = 0;
-    
-    if (sniVal > 20000) {
-        const tranche2 = Math.min(sniVal, 40000) - 20000;
-        irgBrut += tranche2 * 0.23;
-    }
-    
-    if (sniVal > 40000) {
-        const tranche3 = Math.min(sniVal, 80000) - 40000;
-        irgBrut += tranche3 * 0.27;
-    }
-    
-    if (sniVal > 80000) {
-        const tranche4 = Math.min(sniVal, 160000) - 80000;
-        irgBrut += tranche4 * 0.30;
-    }
-    
-    if (sniVal > 160000) {
-        const tranche5 = Math.min(sniVal, 320000) - 160000;
-        irgBrut += tranche5 * 0.33;
-    }
-    
-    if (sniVal > 320000) {
-        const tranche6 = sniVal - 320000;
-        irgBrut += tranche6 * 0.35;
-    }
-    
-    // Apply 40% abatement (min 1000, max 1500)
-    if (sniVal > 35000) {
-        const abattement = Math.min(Math.max(irgBrut * 0.40, 1000), 1500);
-        return Math.max(0, Math.round(irgBrut - abattement));
-    }
-    
-    return Math.round(irgBrut);
-};
-
-// Reverse calculation: Given net, find gross
-const salaireBrutRequis = computed(() => {
-    const netCible = salaireNetSouhaite.value;
-    
-    // Binary search to find the gross that gives us the target net
-    let low = netCible;
-    let high = netCible * 2; // Upper bound estimate
-    
-    for (let i = 0; i < 50; i++) { // Max 50 iterations
-        const mid = Math.round((low + high) / 2);
-        
-        const cnas = Math.round(mid * 0.09);
-        const sni = mid - cnas;
-        const irg = calculateIRG(sni);
-        const netCalcule = mid - cnas - irg;
-        
-        if (Math.abs(netCalcule - netCible) <= 1) {
-            return mid;
-        }
-        
-        if (netCalcule < netCible) {
-            low = mid;
-        } else {
-            high = mid;
-        }
-    }
-    
-    return Math.round((low + high) / 2);
-});
-
-// Calculate base salary (brut minus primes)
+// Calculate primes
 const primesTotal = computed(() => {
     let primes = 0;
     if (inclurePrimeTransport.value) primes += 3000;
@@ -405,35 +317,20 @@ const primesTotal = computed(() => {
     return primes;
 });
 
-const salaireBaseRequis = computed(() => {
-    const brutSansPrimes = salaireBrutRequis.value - primesTotal.value;
-    const tauxAnciennete = Math.min(anciennete.value, 25) / 100;
-    // base + base * taux = brutSansPrimes
-    // base * (1 + taux) = brutSansPrimes
-    // base = brutSansPrimes / (1 + taux)
-    return Math.round(brutSansPrimes / (1 + tauxAnciennete));
+// Use unified salary calculator
+const salaryResult = computed(() => {
+    return calculateFromNet(salaireNetSouhaite.value, {
+        primeTransport: inclurePrimeTransport.value ? 3000 : 0,
+        primePanier: inclurePrimePanier.value ? 2000 : 0,
+    });
 });
 
-const primeAnciennete = computed(() => {
-    const taux = Math.min(anciennete.value, 25) / 100;
-    return Math.round(salaireBaseRequis.value * taux);
-});
-
-const cotisationCNAS = computed(() => {
-    return Math.round(salaireBrutRequis.value * 0.09);
-});
-
-const sni = computed(() => {
-    return salaireBrutRequis.value - cotisationCNAS.value;
-});
-
-const irg = computed(() => {
-    return calculateIRG(sni.value);
-});
-
-const salaireNetCalcule = computed(() => {
-    return salaireBrutRequis.value - cotisationCNAS.value - irg.value;
-});
+const salaireBrutRequis = computed(() => salaryResult.value.totalBrut);
+const salaireBaseRequis = computed(() => salaryResult.value.salaireBrut);
+const cotisationCNAS = computed(() => salaryResult.value.cotisationCNAS);
+const sni = computed(() => salaryResult.value.sni);
+const irg = computed(() => salaryResult.value.irg);
+const salaireNetCalcule = computed(() => salaryResult.value.salaireNet);
 
 const chargesPatronales = computed(() => {
     return Math.round(salaireBrutRequis.value * 0.25);

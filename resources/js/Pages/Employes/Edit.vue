@@ -90,10 +90,50 @@
                 <!-- Configuration Salaire -->
                 <div>
                     <h3 class="text-sm font-medium text-gray-700 mb-4 pb-2 border-b">💰 Configuration Salaire</h3>
+                    
+                    <!-- Toggle Brut/Net -->
+                    <div class="mb-4 flex items-center gap-4">
+                        <span class="text-sm text-gray-600">Mode de saisie:</span>
+                        <div class="flex bg-gray-100 rounded-lg p-1">
+                            <button 
+                                type="button"
+                                @click="salaireMode = 'brut'"
+                                :class="[
+                                    'px-4 py-1.5 text-sm rounded-md transition-colors',
+                                    salaireMode === 'brut' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                                ]"
+                            >
+                                Salaire Brut
+                            </button>
+                            <button 
+                                type="button"
+                                @click="salaireMode = 'net'"
+                                :class="[
+                                    'px-4 py-1.5 text-sm rounded-md transition-colors',
+                                    salaireMode === 'net' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                                ]"
+                            >
+                                Salaire Net
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Salaire de base (DZD) *</label>
-                            <input v-model="form.salaire_base" type="number" step="100" class="input" :class="{ 'border-red-500': form.errors.salaire_base }" />
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ salaireMode === 'brut' ? 'Salaire de base Brut' : 'Salaire Net souhaité' }} (DZD) *
+                            </label>
+                            <input 
+                                v-model="salaireInput" 
+                                type="number" 
+                                step="100" 
+                                class="input" 
+                                :class="{ 
+                                    'border-red-500': form.errors.salaire_base,
+                                    'border-blue-500': salaireMode === 'brut',
+                                    'border-green-500': salaireMode === 'net'
+                                }" 
+                            />
                             <p v-if="form.errors.salaire_base" class="text-red-500 text-sm mt-1">{{ form.errors.salaire_base }}</p>
                         </div>
                         <div>
@@ -106,11 +146,26 @@
                         </div>
                     </div>
                     
-                    <div v-if="form.salaire_base > 0" class="mt-4 p-4 bg-blue-50 rounded-lg">
-                        <p class="text-sm font-medium text-gray-700 mb-2">Aperçu salaire estimé</p>
-                        <div class="flex justify-between text-sm">
-                            <span>Salaire net estimé:</span>
-                            <span class="font-bold text-green-600">~ {{ formatMoney(estimerSalaireNet()) }}</span>
+                    <!-- Aperçu salaire -->
+                    <div v-if="salaireInput > 0" class="mt-4 p-4 rounded-lg" :class="salaireMode === 'brut' ? 'bg-blue-50' : 'bg-green-50'">
+                        <p class="text-sm font-medium text-gray-700 mb-3">Récapitulatif</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-500">Salaire Brut</span>
+                                <p class="font-bold text-blue-600">{{ formatNumber(salaryPreview.totalBrut) }} DZD</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">CNAS (9%)</span>
+                                <p class="font-medium text-red-600">-{{ formatNumber(salaryPreview.cotisationCNAS) }} DZD</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">IRG</span>
+                                <p class="font-medium text-orange-600">-{{ formatNumber(salaryPreview.irg) }} DZD</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Salaire Net</span>
+                                <p class="font-bold text-green-600">{{ formatNumber(salaryPreview.salaireNet) }} DZD</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -211,13 +266,17 @@
 </template>
 
 <script setup>
+import { ref, computed, watch } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { X, Loader2, Info } from 'lucide-vue-next';
-import { formatMoney } from '@/utils/formatters';
+import { calculateFromBrut, calculateFromNet, formatMoney } from '@/utils/salaryCalculator';
 
 const props = defineProps({
     employe: Object,
 });
+
+const salaireMode = ref('brut');
+const salaireInput = ref(props.employe.salaire_base || '');
 
 const form = useForm({
     matricule: props.employe.matricule,
@@ -241,23 +300,25 @@ const form = useForm({
     rib: props.employe.rib || '',
 });
 
-const estimerSalaireNet = () => {
-    const base = parseFloat(form.salaire_base) || 0;
+const salaryPreview = computed(() => {
+    const input = parseFloat(salaireInput.value) || 0;
     const transport = parseFloat(form.prime_transport_defaut) || 0;
     const panier = parseFloat(form.prime_panier_defaut) || 0;
-    const brut = base + transport + panier;
-    const cnas = brut * 0.09;
-    const sni = brut - cnas;
     
-    let irg = 0;
-    if (sni > 30000) {
-        if (sni <= 40000) irg = (sni - 20000) * 0.23;
-        else if (sni <= 80000) irg = 20000 * 0.23 + (sni - 40000) * 0.27;
-        else irg = 20000 * 0.23 + 40000 * 0.27 + (sni - 80000) * 0.30;
-        irg = Math.max(0, irg - 1000);
+    if (salaireMode.value === 'brut') {
+        return calculateFromBrut(input, { primeTransport: transport, primePanier: panier });
+    } else {
+        return calculateFromNet(input, { primeTransport: transport, primePanier: panier });
     }
-    
-    return brut - cnas - irg;
+});
+
+// Update form.salaire_base when input changes
+watch([salaireInput, salaireMode, () => form.prime_transport_defaut, () => form.prime_panier_defaut], () => {
+    form.salaire_base = salaryPreview.value.salaireBrut;
+});
+
+const formatNumber = (num) => {
+    return new Intl.NumberFormat('fr-DZ').format(Math.round(num || 0));
 };
 
 const submit = () => {

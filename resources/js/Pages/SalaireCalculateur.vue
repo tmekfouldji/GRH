@@ -37,19 +37,6 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Ancienneté (années)</label>
-                            <input 
-                                v-model.number="anciennete" 
-                                type="number" 
-                                min="0"
-                                max="30"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                placeholder="5"
-                            />
-                            <p class="mt-1 text-xs text-gray-500">Prime: {{ Math.min(anciennete, 25) }}% (max 25%)</p>
-                        </div>
-
-                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Prime de transport (DZD)</label>
                             <input 
                                 v-model.number="primeTransport" 
@@ -85,23 +72,6 @@
                             />
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Heures supplémentaires</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <input 
-                                    v-model.number="heuresSup" 
-                                    type="number" 
-                                    min="0"
-                                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                    placeholder="Heures"
-                                />
-                                <select v-model="tauxHeuresSup" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                                    <option value="1.5">+50% (jour)</option>
-                                    <option value="1.75">+75% (nuit)</option>
-                                    <option value="2">+100% (férié)</option>
-                                </select>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -167,10 +137,6 @@
                                     <span class="text-gray-600">Salaire de base</span>
                                     <span class="font-medium">{{ formatNumber(salaireBase) }} DZD</span>
                                 </div>
-                                <div v-if="primeAnciennete > 0" class="flex justify-between text-green-600">
-                                    <span>+ Prime d'ancienneté ({{ Math.min(anciennete, 25) }}%)</span>
-                                    <span>{{ formatNumber(primeAnciennete) }} DZD</span>
-                                </div>
                                 <div v-if="primeTransport > 0" class="flex justify-between text-green-600">
                                     <span>+ Prime de transport</span>
                                     <span>{{ formatNumber(primeTransport) }} DZD</span>
@@ -182,10 +148,6 @@
                                 <div v-if="autresPrimes > 0" class="flex justify-between text-green-600">
                                     <span>+ Autres primes</span>
                                     <span>{{ formatNumber(autresPrimes) }} DZD</span>
-                                </div>
-                                <div v-if="montantHeuresSup > 0" class="flex justify-between text-green-600">
-                                    <span>+ Heures supplémentaires ({{ heuresSup }}h × {{ tauxHeuresSup }})</span>
-                                    <span>{{ formatNumber(montantHeuresSup) }} DZD</span>
                                 </div>
                                 <div class="flex justify-between font-bold pt-2 border-t">
                                     <span>= Salaire Brut</span>
@@ -290,112 +252,49 @@
 import { ref, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Calculator, BookOpen, Plus, Minus, Building } from 'lucide-vue-next';
+import { calculateFromBrut } from '@/utils/salaryCalculator';
 
 // Input values
 const salaireBase = ref(50000);
-const anciennete = ref(5);
 const primeTransport = ref(3000);
 const primePanier = ref(2000);
 const autresPrimes = ref(0);
-const heuresSup = ref(0);
-const tauxHeuresSup = ref(1.5);
 
-// Computed values
-const primeAnciennete = computed(() => {
-    const taux = Math.min(anciennete.value, 25) / 100;
-    return Math.round(salaireBase.value * taux);
+// Use unified salary calculator
+const salaryResult = computed(() => {
+    return calculateFromBrut(salaireBase.value, {
+        primeTransport: primeTransport.value,
+        primePanier: primePanier.value,
+        autresPrimes: autresPrimes.value,
+    });
 });
 
-const tauxHoraire = computed(() => {
-    return salaireBase.value / 173.33; // 173.33 heures par mois
-});
+const salaireBrut = computed(() => salaryResult.value.totalBrut);
+const cotisationCNAS = computed(() => salaryResult.value.cotisationCNAS);
+const sni = computed(() => salaryResult.value.sni);
+const irg = computed(() => salaryResult.value.irg);
+const salaireNet = computed(() => salaryResult.value.salaireNet);
 
-const montantHeuresSup = computed(() => {
-    return Math.round(heuresSup.value * tauxHoraire.value * tauxHeuresSup.value);
-});
-
-const salaireBrut = computed(() => {
-    return salaireBase.value + primeAnciennete.value + primeTransport.value + 
-           primePanier.value + autresPrimes.value + montantHeuresSup.value;
-});
-
-const cotisationCNAS = computed(() => {
-    return Math.round(salaireBrut.value * 0.09);
-});
-
-const sni = computed(() => {
-    return salaireBrut.value - cotisationCNAS.value;
-});
-
+// For display: calculate irgBrut and abattement separately for detailed view
 const irgBrut = computed(() => {
     const sniVal = sni.value;
+    if (sniVal <= 30000) return 0;
+    if (sniVal <= 35000) return Math.round((sniVal - 30000) * 0.2);
     
-    // Exonération totale si SNI <= 30,000
-    if (sniVal <= 30000) {
-        return 0;
-    }
-    
-    // Zone dégressive 30,001 - 35,000
-    if (sniVal <= 35000) {
-        // Formule spéciale pour transition douce
-        const depassement = sniVal - 30000;
-        return Math.round(depassement * 0.2); // ~20% du dépassement
-    }
-    
-    // Barème progressif mensuel
     let irg = 0;
-    
-    // Tranche 1: 0 - 20,000 → 0%
-    // Tranche 2: 20,001 - 40,000 → 23%
-    if (sniVal > 20000) {
-        const tranche2 = Math.min(sniVal, 40000) - 20000;
-        irg += tranche2 * 0.23;
-    }
-    
-    // Tranche 3: 40,001 - 80,000 → 27%
-    if (sniVal > 40000) {
-        const tranche3 = Math.min(sniVal, 80000) - 40000;
-        irg += tranche3 * 0.27;
-    }
-    
-    // Tranche 4: 80,001 - 160,000 → 30%
-    if (sniVal > 80000) {
-        const tranche4 = Math.min(sniVal, 160000) - 80000;
-        irg += tranche4 * 0.30;
-    }
-    
-    // Tranche 5: 160,001 - 320,000 → 33%
-    if (sniVal > 160000) {
-        const tranche5 = Math.min(sniVal, 320000) - 160000;
-        irg += tranche5 * 0.33;
-    }
-    
-    // Tranche 6: > 320,000 → 35%
-    if (sniVal > 320000) {
-        const tranche6 = sniVal - 320000;
-        irg += tranche6 * 0.35;
-    }
-    
+    if (sniVal > 20000) irg += (Math.min(sniVal, 40000) - 20000) * 0.23;
+    if (sniVal > 40000) irg += (Math.min(sniVal, 80000) - 40000) * 0.27;
+    if (sniVal > 80000) irg += (Math.min(sniVal, 160000) - 80000) * 0.30;
+    if (sniVal > 160000) irg += (Math.min(sniVal, 320000) - 160000) * 0.33;
+    if (sniVal > 320000) irg += (sniVal - 320000) * 0.35;
     return Math.round(irg);
 });
 
 const abattement = computed(() => {
     if (sni.value <= 30000) return 0;
-    
-    // Abattement 40% avec min 1000 et max 1500
+    if (sni.value <= 35000) return 0;
     const abat = irgBrut.value * 0.40;
     return Math.round(Math.min(Math.max(abat, 1000), 1500));
-});
-
-const irg = computed(() => {
-    if (sni.value <= 30000) return 0;
-    if (sni.value <= 35000) return irgBrut.value; // Pas d'abattement en zone dégressive
-    
-    return Math.max(0, irgBrut.value - abattement.value);
-});
-
-const salaireNet = computed(() => {
-    return salaireBrut.value - cotisationCNAS.value - irg.value;
 });
 
 const chargesPatronales = computed(() => {
@@ -421,33 +320,28 @@ const setPreset = (preset) => {
     switch (preset) {
         case 'smic':
             salaireBase.value = 20000;
-            anciennete.value = 0;
             primeTransport.value = 2000;
             primePanier.value = 0;
             autresPrimes.value = 0;
             break;
         case 'moyen':
             salaireBase.value = 45000;
-            anciennete.value = 5;
             primeTransport.value = 3000;
             primePanier.value = 2000;
             autresPrimes.value = 0;
             break;
         case 'cadre':
             salaireBase.value = 80000;
-            anciennete.value = 10;
             primeTransport.value = 5000;
             primePanier.value = 3000;
             autresPrimes.value = 5000;
             break;
         case 'directeur':
             salaireBase.value = 150000;
-            anciennete.value = 15;
             primeTransport.value = 10000;
             primePanier.value = 5000;
             autresPrimes.value = 20000;
             break;
     }
-    heuresSup.value = 0;
 };
 </script>
