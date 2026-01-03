@@ -98,11 +98,37 @@
                     </div>
                 </div>
                 
-                <!-- Net à payer -->
-                <div class="bg-green-50 rounded-lg p-4 mt-4">
+                <!-- Salaire Net -->
+                <div class="bg-blue-50 rounded-lg p-4 mt-4">
                     <div class="flex justify-between items-center">
-                        <span class="text-lg font-semibold text-gray-800">NET À PAYER</span>
-                        <span class="text-2xl font-bold text-green-600">{{ formatMoney(fichePaie.salaire_net) }}</span>
+                        <span class="text-lg font-semibold text-gray-800">SALAIRE NET</span>
+                        <span class="text-xl font-bold text-blue-600">{{ formatMoney(fichePaie.salaire_net) }}</span>
+                    </div>
+                </div>
+                
+                <!-- Retards & Pénalités -->
+                <div v-if="fichePaie.deduction_retard > 0 || fichePaie.deduction_absence > 0">
+                    <h3 class="text-sm font-medium text-gray-500 mb-3 mt-4">RETARDS & PÉNALITÉS</h3>
+                    <div class="space-y-2">
+                        <div v-if="fichePaie.deduction_retard > 0" class="flex justify-between">
+                            <span class="text-gray-600">Pénalités retards/absences</span>
+                            <span class="font-medium text-red-600">-{{ formatMoney(fichePaie.deduction_retard) }}</span>
+                        </div>
+                        <div v-if="fichePaie.deduction_absence > 0" class="flex justify-between">
+                            <span class="text-gray-600">Déduction absences</span>
+                            <span class="font-medium text-red-600">-{{ formatMoney(fichePaie.deduction_absence) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Net à payer -->
+                <div class="bg-green-50 rounded-lg p-4 mt-4 border-2 border-green-200">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-lg font-semibold text-gray-800">NET À PAYER</span>
+                            <p class="text-xs text-gray-500">Après pénalités</p>
+                        </div>
+                        <span class="text-2xl font-bold text-green-600">{{ formatMoney(fichePaie.net_a_payer || fichePaie.salaire_net) }}</span>
                     </div>
                 </div>
             </div>

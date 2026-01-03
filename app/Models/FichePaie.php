@@ -34,6 +34,7 @@ class FichePaie extends Model
         'autres_deductions',
         'total_deductions',
         'salaire_net',
+        'net_a_payer',
         'statut',
         'statut_validation',
         'date_validation',
@@ -41,6 +42,9 @@ class FichePaie extends Model
         'notes_validation',
         'ajustement_heures',
         'motif_ajustement',
+        'deduction_retard',
+        'deduction_absence',
+        'minutes_retard',
         'statut_reception',
         'date_remise',
         'remis_par',
@@ -60,15 +64,19 @@ class FichePaie extends Model
         'cotisation_amo' => 'decimal:2',
         'ir' => 'decimal:2',
         'autres_deductions' => 'decimal:2',
+        'deduction_retard' => 'decimal:2',
+        'deduction_absence' => 'decimal:2',
+        'minutes_retard' => 'integer',
         'total_deductions' => 'decimal:2',
         'salaire_net' => 'decimal:2',
+        'net_a_payer' => 'decimal:2',
         'date_paiement' => 'date',
         'date_remise' => 'datetime',
         'date_validation' => 'datetime',
         'ajustement_heures' => 'decimal:2',
     ];
 
-    protected $appends = ['statut_validation_label', 'net_a_payer', 'ratio_presence'];
+    protected $appends = ['statut_validation_label', 'ratio_presence'];
 
     public function paieMensuelle()
     {
@@ -117,12 +125,13 @@ class FichePaie extends Model
      */
     public function getPointagesDuMois()
     {
-        // Use explicit date range to ensure correct month filtering
-        $startDate = \Carbon\Carbon::create((int) $this->annee, (int) $this->mois, 1)->startOfDay();
-        $endDate = $startDate->copy()->endOfMonth()->endOfDay();
+        // Use date strings for comparison (date_pointage is a date field, not datetime)
+        $startDate = sprintf('%04d-%02d-01', (int) $this->annee, (int) $this->mois);
+        $endDate = \Carbon\Carbon::create((int) $this->annee, (int) $this->mois, 1)->endOfMonth()->format('Y-m-d');
         
         return Pointage::where('employe_id', $this->employe_id)
-            ->whereBetween('date_pointage', [$startDate, $endDate])
+            ->whereDate('date_pointage', '>=', $startDate)
+            ->whereDate('date_pointage', '<=', $endDate)
             ->orderBy('date_pointage')
             ->get();
     }
@@ -261,18 +270,21 @@ class FichePaie extends Model
     }
 
     /**
-     * Get net à payer (salaire net proraté selon présences)
+     * Calculate and store net_a_payer
+     * Now simply subtracts penalties from salaire_net (already prorated)
      */
-    public function getNetAPayerAttribute()
+    public function calculerNetAPayer()
     {
-        $ratio = $this->ratio_presence;
-        return round($this->salaire_net * $ratio, 2);
+        $deductions = ($this->deduction_retard ?? 0) + ($this->deduction_absence ?? 0);
+        $this->net_a_payer = round($this->salaire_net - $deductions, 2);
+        return $this;
     }
 
     /**
      * Calculer les cotisations et le salaire net selon la législation algérienne
-     * Calcule le salaire COMPLET du mois (sans prorata)
-     * Le prorata est appliqué via net_a_payer
+     * 
+     * MÉTHODE LÉGALE: Le salaire est d'abord proraté selon les présences,
+     * puis les cotisations (CNAS, IRG) sont calculées sur le montant proraté.
      * 
      * Références:
      * - CNAS: 9% cotisation salariale (25% patronale non déduite du salaire)
@@ -280,30 +292,36 @@ class FichePaie extends Model
      */
     public function calculerSalaire()
     {
+        // Ratio de présence (jours travaillés + justifiés / jours ouvrés)
+        $ratio = $this->ratio_presence;
+        
         // Total des primes (valeur complète du mois)
         $total_primes = $this->prime_anciennete + $this->prime_rendement + 
                         $this->prime_transport + $this->autres_primes;
         
-        // Salaire brut = salaire de base + primes (mois complet)
-        $this->salaire_brut = round($this->salaire_base + $total_primes, 2);
+        // Salaire brut complet (pour référence)
+        $brut_complet = $this->salaire_base + $total_primes;
         
-        // Cotisation CNAS salariale: 9% du salaire brut
+        // Salaire brut proraté selon présences
+        $this->salaire_brut = round($brut_complet * $ratio, 2);
+        
+        // Cotisation CNAS salariale: 9% du salaire brut proraté
         $this->cotisation_cnss = round($this->salaire_brut * 0.09, 2);
         
         // Pas de cotisation AMO séparée en Algérie (incluse dans CNAS)
         $this->cotisation_amo = 0;
         
-        // Salaire Net Imposable (SNI) = Brut - Cotisations sociales
+        // Salaire Net Imposable (SNI) = Brut proraté - Cotisations sociales
         $salaire_imposable = $this->salaire_brut - $this->cotisation_cnss;
         
         // IRG (Impôt sur le Revenu Global) selon barème algérien
         $this->ir = $this->calculerIRG($salaire_imposable);
         
-        // Total déductions
+        // Total déductions (sur montants proratés)
         $this->total_deductions = round($this->cotisation_cnss + $this->cotisation_amo + 
                                   $this->ir + $this->autres_deductions, 2);
         
-        // Salaire net (mois complet) - le prorata est dans net_a_payer
+        // Salaire net (déjà proraté)
         $this->salaire_net = round($this->salaire_brut - $this->total_deductions, 2);
         
         return $this;

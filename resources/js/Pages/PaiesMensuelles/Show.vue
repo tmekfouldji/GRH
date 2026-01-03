@@ -241,6 +241,14 @@
                             </td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex justify-center gap-1">
+                                    <button 
+                                        v-if="paie.statut === 'brouillon'"
+                                        @click="openRetardsModal(fiche)"
+                                        class="p-1 text-orange-600 hover:bg-orange-50 rounded"
+                                        title="Gérer retards & absences"
+                                    >
+                                        <Clock class="w-4 h-4" />
+                                    </button>
                                     <Link 
                                         v-if="paie.statut === 'brouillon'"
                                         :href="`/fiches-paie/${fiche.id}/validation-presences`" 
@@ -278,6 +286,16 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Gestion Retards -->
+    <GestionRetardsModal 
+        :show="showRetardsModal"
+        :fiche="selectedFiche"
+        :pointages="selectedPointages"
+        :periode="paie.periode"
+        @close="closeRetardsModal"
+        @saved="onRetardsSaved"
+    />
 </template>
 
 <script setup>
@@ -285,9 +303,10 @@ import { ref, reactive, computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { 
     ArrowLeft, CheckCircle, Play, Lock, Printer, FileText, 
-    Trash2, Eye, AlertTriangle, ClipboardCheck 
+    Trash2, Eye, AlertTriangle, ClipboardCheck, Clock 
 } from 'lucide-vue-next';
 import { formatMoney, formatDate } from '@/utils/formatters';
+import GestionRetardsModal from '@/Components/GestionRetardsModal.vue';
 
 const props = defineProps({
     paie: Object,
@@ -295,6 +314,9 @@ const props = defineProps({
 });
 
 const showAnnulerModal = ref(false);
+const showRetardsModal = ref(false);
+const selectedFiche = ref(null);
+const selectedPointages = ref([]);
 
 const validationStats = computed(() => {
     const fiches = props.paie.fiches_paie || [];
@@ -362,4 +384,32 @@ const updateTaxStatus = (type) => {
 
 const calculerPresences = () => router.post(`/paies-mensuelles/${props.paie.id}/calculer-presences`, {}, { preserveScroll: true });
 const validerToutesPresences = () => router.post(`/paies-mensuelles/${props.paie.id}/valider-toutes-presences`, {}, { preserveScroll: true });
+
+const openRetardsModal = async (fiche) => {
+    selectedFiche.value = fiche;
+    try {
+        const response = await fetch(`/fiches-paie/${fiche.id}/pointages`);
+        const data = await response.json();
+        console.log('Pointages data:', data);
+        console.log('Debug info:', data.debug);
+        selectedPointages.value = data.pointages || [];
+        // Update fiche with fresh data from server
+        if (data.fiche) {
+            selectedFiche.value = data.fiche;
+        }
+        showRetardsModal.value = true;
+    } catch (error) {
+        console.error('Error fetching pointages:', error);
+    }
+};
+
+const closeRetardsModal = () => {
+    showRetardsModal.value = false;
+    selectedFiche.value = null;
+    selectedPointages.value = [];
+};
+
+const onRetardsSaved = () => {
+    router.reload({ preserveScroll: true });
+};
 </script>

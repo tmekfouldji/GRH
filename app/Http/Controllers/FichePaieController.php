@@ -334,4 +334,121 @@ class FichePaieController extends Controller
         $fichesPaie->load('employe');
         return view('fiches-paie.imprimer', compact('fichesPaie'));
     }
+
+    /**
+     * Get pointages for a fiche (for the retards modal)
+     */
+    public function getPointages(FichePaie $fichePaie)
+    {
+        // Get pointages for the fiche's specific month/year
+        $pointages = $fichePaie->getPointagesDuMois();
+        
+        return response()->json([
+            'pointages' => $pointages,
+            'fiche' => $fichePaie->load('employe'),
+            'debug' => [
+                'fiche_mois' => $fichePaie->mois,
+                'fiche_annee' => $fichePaie->annee,
+                'employe_id' => $fichePaie->employe_id,
+                'pointages_count' => $pointages->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Update pointages and deductions for retards/absences
+     */
+    public function updateRetards(Request $request, FichePaie $fichePaie)
+    {
+        $validated = $request->validate([
+            'days' => 'array',
+            'days.*.id' => 'nullable|integer',
+            'days.*.date' => 'required|date',
+            'days.*.statut' => 'required|string',
+            'days.*.heure_entree' => 'nullable|string',
+            'days.*.heure_sortie' => 'nullable|string',
+            'days.*.is_late' => 'nullable|boolean',
+            'days.*.penalty' => 'nullable|numeric|min:0',
+            'days.*.included' => 'nullable|boolean',
+            'total_penalty' => 'nullable|numeric|min:0',
+            'net_a_payer' => 'nullable|numeric|min:0',
+            'jours_travailles' => 'nullable|integer|min:0',
+        ]);
+
+        // Update or create pointages for each day
+        foreach ($validated['days'] as $dayData) {
+            $date = $dayData['date'];
+            
+            // Skip days without any data (no times, not included)
+            $hasData = !empty($dayData['heure_entree']) || 
+                       !empty($dayData['heure_sortie']) || 
+                       ($dayData['included'] ?? false) ||
+                       ($dayData['is_late'] ?? false);
+            
+            // Find existing pointage
+            $pointage = Pointage::where('employe_id', $fichePaie->employe_id)
+                ->whereDate('date_pointage', $date)
+                ->first();
+            
+            if (!$pointage && $hasData) {
+                $pointage = new Pointage([
+                    'employe_id' => $fichePaie->employe_id,
+                    'date_pointage' => $date,
+                ]);
+            }
+            
+            if ($pointage) {
+                // Set status - if late checkbox is checked, set as retard
+                $pointage->statut = ($dayData['is_late'] ?? false) ? 'retard' : $dayData['statut'];
+                
+                // Update times if provided
+                if (!empty($dayData['heure_entree'])) {
+                    $pointage->heure_entree = $date . ' ' . $dayData['heure_entree'] . ':00';
+                } else {
+                    $pointage->heure_entree = null;
+                }
+                if (!empty($dayData['heure_sortie'])) {
+                    $pointage->heure_sortie = $date . ' ' . $dayData['heure_sortie'] . ':00';
+                } else {
+                    $pointage->heure_sortie = null;
+                }
+                
+                // Recalculate hours if times provided
+                if ($pointage->heure_entree && $pointage->heure_sortie) {
+                    [$heures, $heures_sup] = Pointage::calculerHeures($pointage->heure_entree, $pointage->heure_sortie);
+                    $pointage->heures_travaillees = $heures;
+                    $pointage->heures_supplementaires = $heures_sup;
+                } else {
+                    $pointage->heures_travaillees = 0;
+                    $pointage->heures_supplementaires = 0;
+                }
+                
+                $pointage->save();
+            }
+        }
+
+        // Update jours_travailles FIRST (affects ratio_presence for calculerSalaire)
+        if (isset($validated['jours_travailles'])) {
+            $fichePaie->jours_travailles = $validated['jours_travailles'];
+        }
+        
+        // Set penalties
+        $fichePaie->deduction_retard = $validated['total_penalty'] ?? 0;
+        $fichePaie->deduction_absence = 0;
+        
+        // Recalculate salary with new ratio (prorates brut, CNAS, IRG)
+        $fichePaie->calculerSalaire();
+        
+        // Calculate net_a_payer (salaire_net - penalties)
+        $fichePaie->calculerNetAPayer();
+        
+        $fichePaie->save();
+
+        // Recalculate totals if linked to paie mensuelle
+        if ($fichePaie->paieMensuelle) {
+            $fichePaie->paieMensuelle->recalculerTotaux();
+        }
+
+        return redirect()->back()->with('success', 'Retards et déductions mis à jour.');
+    }
 }

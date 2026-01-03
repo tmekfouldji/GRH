@@ -65,6 +65,8 @@ Route::middleware('auth')->group(function () {
     Route::post('fiches-paie/importer/excel', [FichePaieController::class, 'importerExcel'])->name('fiches-paie.importer');
     Route::get('fiches-paie/{fiches_paie}/imprimer', [FichePaieController::class, 'imprimer'])->name('fiches-paie.imprimer');
     Route::post('fiches-paie/{fichePaie}/marquer-remis', [PaieMensuelleController::class, 'marquerRemis'])->name('fiches-paie.marquer-remis');
+    Route::get('fiches-paie/{fichePaie}/pointages', [FichePaieController::class, 'getPointages'])->name('fiches-paie.pointages');
+    Route::post('fiches-paie/{fichePaie}/update-retards', [FichePaieController::class, 'updateRetards'])->name('fiches-paie.update-retards');
 
     // Paies Mensuelles
     Route::resource('paies-mensuelles', PaieMensuelleController::class)->except(['edit', 'update']);
