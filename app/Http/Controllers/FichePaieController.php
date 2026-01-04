@@ -451,4 +451,36 @@ class FichePaieController extends Controller
 
         return redirect()->back()->with('success', 'Retards et déductions mis à jour.');
     }
+
+    /**
+     * Sync employee data to fiche de paie
+     * Updates salaire_base and primes from current employee data
+     */
+    public function syncEmployeData(FichePaie $fichePaie)
+    {
+        $employe = $fichePaie->employe;
+        
+        if (!$employe) {
+            return redirect()->back()->with('error', 'Employé non trouvé.');
+        }
+
+        // Update salary data from employee
+        $fichePaie->salaire_base = $employe->salaire_base ?? 0;
+        $fichePaie->prime_anciennete = $employe->prime_anciennete ?? 0;
+        $fichePaie->prime_rendement = $employe->prime_rendement ?? 0;
+        $fichePaie->prime_transport = $employe->prime_transport ?? 0;
+        $fichePaie->autres_primes = $employe->autres_primes ?? 0;
+        
+        // Recalculate salary with new data
+        $fichePaie->calculerSalaire();
+        $fichePaie->calculerNetAPayer();
+        $fichePaie->save();
+
+        // Recalculate totals if linked to paie mensuelle
+        if ($fichePaie->paieMensuelle) {
+            $fichePaie->paieMensuelle->recalculerTotaux();
+        }
+
+        return redirect()->back()->with('success', 'Données employé synchronisées.');
+    }
 }

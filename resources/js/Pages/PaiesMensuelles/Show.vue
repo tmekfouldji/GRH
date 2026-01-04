@@ -32,6 +32,10 @@
                     Clôturer
                 </button>
                 
+                <button v-if="paie.statut === 'brouillon'" @click="syncAllEmployeData" class="btn btn-secondary flex items-center gap-2">
+                    <RefreshCw class="w-4 h-4" />
+                    Sync employés
+                </button>
                 <a :href="`/paies-mensuelles/${paie.id}/imprimer-tout`" target="_blank" class="btn btn-secondary flex items-center gap-2">
                     <Printer class="w-4 h-4" />
                     Imprimer tout
@@ -243,6 +247,14 @@
                                 <div class="flex justify-center gap-1">
                                     <button 
                                         v-if="paie.statut === 'brouillon'"
+                                        @click="syncEmployeData(fiche.id)"
+                                        class="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                                        title="Synchroniser données employé"
+                                    >
+                                        <RefreshCw class="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        v-if="paie.statut === 'brouillon'"
                                         @click="openRetardsModal(fiche)"
                                         class="p-1 text-orange-600 hover:bg-orange-50 rounded"
                                         title="Gérer retards & absences"
@@ -303,7 +315,7 @@ import { ref, reactive, computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { 
     ArrowLeft, CheckCircle, Play, Lock, Printer, FileText, 
-    Trash2, Eye, AlertTriangle, ClipboardCheck, Clock 
+    Trash2, Eye, AlertTriangle, ClipboardCheck, Clock, RefreshCw 
 } from 'lucide-vue-next';
 import { formatMoney, formatDate } from '@/utils/formatters';
 import GestionRetardsModal from '@/Components/GestionRetardsModal.vue';
@@ -411,5 +423,16 @@ const closeRetardsModal = () => {
 
 const onRetardsSaved = () => {
     router.reload({ preserveScroll: true });
+};
+
+const syncEmployeData = (ficheId) => {
+    router.post(`/fiches-paie/${ficheId}/sync-employe`, {}, { preserveScroll: true });
+};
+
+const syncAllEmployeData = () => {
+    const fiches = props.paie.fiches_paie || [];
+    fiches.forEach(fiche => {
+        router.post(`/fiches-paie/${fiche.id}/sync-employe`, {}, { preserveScroll: true });
+    });
 };
 </script>

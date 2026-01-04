@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
     Route::post('fiches-paie/{fichePaie}/marquer-remis', [PaieMensuelleController::class, 'marquerRemis'])->name('fiches-paie.marquer-remis');
     Route::get('fiches-paie/{fichePaie}/pointages', [FichePaieController::class, 'getPointages'])->name('fiches-paie.pointages');
     Route::post('fiches-paie/{fichePaie}/update-retards', [FichePaieController::class, 'updateRetards'])->name('fiches-paie.update-retards');
+    Route::post('fiches-paie/{fichePaie}/sync-employe', [FichePaieController::class, 'syncEmployeData'])->name('fiches-paie.sync-employe');
 
     // Paies Mensuelles
     Route::resource('paies-mensuelles', PaieMensuelleController::class)->except(['edit', 'update']);
