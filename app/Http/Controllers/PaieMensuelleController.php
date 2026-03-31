@@ -410,14 +410,23 @@ class PaieMensuelleController extends Controller
     {
         $paiesMensuelle->load(['fichesPaie.employe']);
 
+        // Auto-sync snapshot for fiches whose employee is now 'piece' but snapshot wasn't set
+        foreach ($paiesMensuelle->fichesPaie as $fiche) {
+            if ($fiche->employe && $fiche->employe->mode_remuneration === 'piece' && $fiche->mode_remuneration_snapshot !== 'piece') {
+                $fiche->mode_remuneration_snapshot = 'piece';
+                $fiche->prime_par_piece_snapshot = $fiche->employe->prime_par_piece;
+                $fiche->save();
+            }
+        }
+
         $fichesPiece = $paiesMensuelle->fichesPaie
-            ->filter(fn($f) => $f->mode_remuneration_snapshot === 'piece')
+            ->filter(fn($f) => $f->mode_remuneration_snapshot === 'piece' || ($f->employe && $f->employe->mode_remuneration === 'piece'))
             ->map(fn($f) => [
                 'id' => $f->id,
                 'employe_matricule' => $f->employe->matricule ?? '',
                 'employe_nom' => $f->employe->nom ?? '',
                 'employe_prenom' => $f->employe->prenom ?? '',
-                'prime_par_piece_snapshot' => $f->prime_par_piece_snapshot,
+                'prime_par_piece_snapshot' => $f->prime_par_piece_snapshot ?? $f->employe->prime_par_piece ?? 0,
                 'pieces_fabriquees' => $f->pieces_fabriquees ?? 0,
                 'prime_rendement' => $f->prime_rendement,
             ])

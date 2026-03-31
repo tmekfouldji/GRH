@@ -357,7 +357,7 @@ const validationStats = computed(() => {
 
 const hasPieceEmployees = computed(() => {
     const fiches = props.paie.fiches_paie || [];
-    return fiches.some(f => f.mode_remuneration_snapshot === 'piece');
+    return fiches.some(f => f.mode_remuneration_snapshot === 'piece' || f.employe?.mode_remuneration === 'piece');
 });
 
 const totalNetAPayer = computed(() => {
