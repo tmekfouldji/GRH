@@ -99,8 +99,29 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        <div v-if="fichesPaie.last_page > 1" class="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+            <span class="text-sm text-gray-600">
+                Affichage {{ fichesPaie.from }}-{{ fichesPaie.to }} sur {{ fichesPaie.total }} fiche(s)
+            </span>
+            <div class="flex gap-1">
+                <Link
+                    v-for="link in fichesPaie.links"
+                    :key="link.label"
+                    :href="link.url || '#'"
+                    :class="[
+                        'px-3 py-2 text-sm rounded-lg',
+                        link.active ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100 border',
+                        !link.url && 'opacity-50 cursor-not-allowed pointer-events-none'
+                    ]"
+                    v-html="link.label"
+                    preserve-state
+                />
+            </div>
+        </div>
     </div>
-    
+
     <!-- Génération en masse Modal -->
     <div v-if="showGenererModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">

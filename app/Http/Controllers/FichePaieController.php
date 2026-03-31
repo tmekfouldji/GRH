@@ -393,6 +393,8 @@ class FichePaieController extends Controller
             'total_penalty' => 'nullable|numeric|min:0',
             'net_a_payer' => 'nullable|numeric|min:0',
             'jours_travailles' => 'nullable|integer|min:0',
+            'pieces_fabriquees' => 'nullable|integer|min:0',
+            'prime_par_piece' => 'nullable|numeric|min:0',
         ]);
 
         // Update or create pointages for each day
@@ -452,6 +454,18 @@ class FichePaieController extends Controller
             $fichePaie->jours_travailles = $validated['jours_travailles'];
         }
         
+        // Update pieces_fabriquees and prime_par_piece if provided (piece employees)
+        if (isset($validated['pieces_fabriquees'])) {
+            $fichePaie->pieces_fabriquees = $validated['pieces_fabriquees'];
+            // Auto-sync snapshot if not yet set
+            if ($fichePaie->mode_remuneration_snapshot !== 'piece' && $fichePaie->employe && $fichePaie->employe->mode_remuneration === 'piece') {
+                $fichePaie->mode_remuneration_snapshot = 'piece';
+            }
+        }
+        if (isset($validated['prime_par_piece'])) {
+            $fichePaie->prime_par_piece_snapshot = $validated['prime_par_piece'];
+        }
+
         // Set penalties
         $fichePaie->deduction_retard = $validated['total_penalty'] ?? 0;
         $fichePaie->deduction_absence = 0;
