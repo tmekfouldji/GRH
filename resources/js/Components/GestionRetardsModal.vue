@@ -181,6 +181,10 @@
                 <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-t">
                     <div class="text-sm text-gray-600">
                         <div class="flex items-center gap-4">
+                            <div v-if="isPieceEmployee">
+                                <span class="text-xs text-gray-500">Prime pièces:</span>
+                                <span class="font-medium text-purple-600 ml-1">{{ formatMoney(calculatedPrimeRendement) }}</span>
+                            </div>
                             <div>
                                 <span class="text-xs text-gray-500">Brut proraté:</span>
                                 <span class="font-medium ml-1">{{ formatMoney(calculatedBrutProrata) }}</span>
@@ -345,10 +349,20 @@ const calculatedRatio = computed(() => {
 const calculatedBrutProrata = computed(() => {
     if (!props.fiche) return 0;
     const salaireBase = parseFloat(props.fiche.salaire_base) || 0;
-    const primes = (parseFloat(props.fiche.prime_rendement) || 0) + 
-                   (parseFloat(props.fiche.prime_transport) || 0) +
-                   (parseFloat(props.fiche.autres_primes) || 0);
-    return (salaireBase + primes) * calculatedRatio.value;
+    const primeTransport = parseFloat(props.fiche.prime_transport) || 0;
+    const autresPrimes = parseFloat(props.fiche.autres_primes) || 0;
+    const ratio = calculatedRatio.value;
+
+    if (isPieceEmployee.value) {
+        // Piece employees: prime_rendement (from pieces) is NOT prorated
+        // salaire_base and other primes ARE prorated
+        const primeRendement = calculatedPrimeRendement.value;
+        return primeRendement + (salaireBase * ratio) + ((primeTransport + autresPrimes) * ratio);
+    }
+
+    // Salary employees: everything prorated
+    const primeRendement = parseFloat(props.fiche.prime_rendement) || 0;
+    return (salaireBase + primeRendement + primeTransport + autresPrimes) * ratio;
 });
 
 const calculatedCNAS = computed(() => calculatedBrutProrata.value * 0.09);
