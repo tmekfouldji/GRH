@@ -53,6 +53,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom complet</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Poste</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Rémun.</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Salaire Base</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Primes</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Salaire Net</th>
@@ -79,6 +80,14 @@
                                 {{ getStatutLabel(employe.statut) }}
                             </span>
                         </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-center">
+                            <span v-if="employe.mode_remuneration === 'piece'" class="px-2 py-1 text-xs rounded-full font-medium bg-purple-100 text-purple-800">
+                                Pièce
+                            </span>
+                            <span v-else class="px-2 py-1 text-xs rounded-full font-medium bg-blue-100 text-blue-800">
+                                Salaire
+                            </span>
+                        </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">{{ formatNumber(employe.salaire_base) }}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-right">
                             <div class="text-xs text-gray-500">
@@ -101,7 +110,7 @@
                         </td>
                     </tr>
                     <tr v-if="employes.data.length === 0">
-                        <td colspan="8" class="px-4 py-12 text-center text-gray-500">
+                        <td colspan="9" class="px-4 py-12 text-center text-gray-500">
                             Aucun employé trouvé
                         </td>
                     </tr>

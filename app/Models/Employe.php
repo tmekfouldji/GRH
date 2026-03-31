@@ -36,6 +36,8 @@ class Employe extends Model
         'numero_cnas',
         'mode_paiement',
         'rib',
+        'mode_remuneration',
+        'prime_par_piece',
     ];
 
     protected $casts = [
@@ -44,6 +46,7 @@ class Employe extends Model
         'salaire_base' => 'decimal:2',
         'prime_transport_defaut' => 'decimal:2',
         'prime_panier_defaut' => 'decimal:2',
+        'prime_par_piece' => 'decimal:2',
     ];
 
     protected $appends = ['nom_complet', 'anciennete', 'salaire_preview'];
@@ -125,22 +128,27 @@ class Employe extends Model
         $salaire_base = $this->salaire_base ?? 0;
         $prime_transport = $this->prime_transport_defaut ?? 0;
         $prime_panier = $this->prime_panier_defaut ?? 0;
-        
-        // Salaire brut (sans prime d'ancienneté)
-        $salaire_brut = $salaire_base + $prime_transport + $prime_panier + $primes_supplementaires;
-        
+
+        if ($this->mode_remuneration === 'piece') {
+            // Pour les employés "à la pièce", le preview montre le salaire de base + primes fixes
+            // La prime de rendement (pièces) n'est pas incluse car elle dépend de la production mensuelle
+            $salaire_brut = $salaire_base + $prime_transport + $prime_panier + $primes_supplementaires;
+        } else {
+            $salaire_brut = $salaire_base + $prime_transport + $prime_panier + $primes_supplementaires;
+        }
+
         // CNAS 9%
         $cotisation_cnas = $salaire_brut * 0.09;
-        
+
         // SNI (Salaire Net Imposable)
         $sni = $salaire_brut - $cotisation_cnas;
-        
+
         // IRG
         $irg = $this->calculerIRG($sni);
-        
+
         // Salaire net
         $salaire_net = $salaire_brut - $cotisation_cnas - $irg;
-        
+
         return [
             'salaire_base' => round($salaire_base, 2),
             'prime_transport' => round($prime_transport, 2),
@@ -151,6 +159,8 @@ class Employe extends Model
             'irg' => round($irg, 2),
             'total_deductions' => round($cotisation_cnas + $irg, 2),
             'salaire_net' => round($salaire_net, 2),
+            'mode_remuneration' => $this->mode_remuneration ?? 'salaire',
+            'prime_par_piece' => $this->prime_par_piece,
         ];
     }
 
@@ -191,6 +201,9 @@ class Employe extends Model
             'prime_transport' => $this->prime_transport_defaut ?? 0,
             'autres_primes' => ($this->prime_panier_defaut ?? 0) + ($options['autres_primes'] ?? 0),
             'autres_deductions' => $options['autres_deductions'] ?? 0,
+            'mode_remuneration_snapshot' => $this->mode_remuneration ?? 'salaire',
+            'prime_par_piece_snapshot' => $this->prime_par_piece,
+            'pieces_fabriquees' => 0,
         ]);
 
         // Calculate presences from pointages for this specific month/year

@@ -54,7 +54,7 @@
                 <Calculator class="w-5 h-5 text-blue-600" />
                 <h3 class="font-semibold text-blue-800">Calcul du Salaire</h3>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div>
                     <p class="text-blue-600">Salaire de base</p>
                     <p class="font-bold">{{ formatMoney(fiche.salaire_base) }} DZD</p>
@@ -63,6 +63,11 @@
                     <p class="text-blue-600">Ratio présence</p>
                     <p class="font-bold">{{ ratioPresence }}%</p>
                     <p class="text-xs text-blue-500">({{ fiche.jours_travailles + fiche.jours_justifies }}/{{ joursOuvres }} jours)</p>
+                </div>
+                <div>
+                    <p class="text-amber-600">Montant H. Sup.</p>
+                    <p class="font-bold text-amber-700">{{ formatMoney(fiche.montant_heures_supplementaires) }} DZD</p>
+                    <p v-if="fiche.heures_supplementaires > 0" class="text-xs text-amber-500">{{ fiche.heures_supplementaires }}h × 1.5</p>
                 </div>
                 <div>
                     <p class="text-blue-600">Salaire brut calculé</p>
@@ -75,6 +80,17 @@
             </div>
         </div>
         
+        <!-- Warning: heures sup sans salaire de base -->
+        <div v-if="fiche.heures_supplementaires > 0 && (!fiche.salaire_base || fiche.salaire_base == 0)" class="card bg-orange-50 border-orange-300">
+            <div class="flex items-center gap-3">
+                <AlertTriangle class="w-5 h-5 text-orange-600" />
+                <div>
+                    <p class="font-medium text-orange-800">Heures supplémentaires sans salaire de base</p>
+                    <p class="text-sm text-orange-700">{{ fiche.heures_supplementaires }}h supplémentaires détectées mais le salaire de base est à 0. Le montant des heures supplémentaires ne peut pas être calculé.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Ajustement existant -->
         <div v-if="fiche.ajustement_heures != 0" class="card bg-yellow-50 border-yellow-200">
             <div class="flex items-center gap-3">

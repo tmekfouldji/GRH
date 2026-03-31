@@ -29,6 +29,15 @@ class Pointage extends Model
         'heures_supplementaires' => 'decimal:2',
     ];
 
+    /**
+     * Serialize dates in app timezone instead of UTC for JSON output.
+     * Prevents time shift when frontend extracts HH:MM from the datetime string.
+     */
+    protected function serializeDate(\DateTimeInterface $date)
+    {
+        return $date->format('Y-m-d H:i:s');
+    }
+
     public function employe()
     {
         return $this->belongsTo(Employe::class);

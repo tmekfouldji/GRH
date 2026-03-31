@@ -118,21 +118,39 @@
                         </div>
                     </div>
                     
+                    <!-- Mode de rémunération -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Mode de rémunération *</label>
+                            <select v-model="form.mode_remuneration" class="input" :class="{ 'border-red-500': form.errors.mode_remuneration }">
+                                <option value="salaire">Au salaire</option>
+                                <option value="piece">À la pièce</option>
+                            </select>
+                            <p v-if="form.errors.mode_remuneration" class="text-red-500 text-sm mt-1">{{ form.errors.mode_remuneration }}</p>
+                        </div>
+                        <div v-if="form.mode_remuneration === 'piece'">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Prime par pièce (DZD) *</label>
+                            <input v-model="form.prime_par_piece" type="number" step="0.01" min="0.01" class="input" :class="{ 'border-red-500': form.errors.prime_par_piece }" placeholder="Ex: 50" />
+                            <p v-if="form.errors.prime_par_piece" class="text-red-500 text-sm mt-1">{{ form.errors.prime_par_piece }}</p>
+                            <p class="text-xs text-gray-400 mt-1">Montant par pièce fabriquée</p>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 {{ salaireMode === 'brut' ? 'Salaire de base Brut' : 'Salaire Net souhaité' }} (DZD) *
                             </label>
-                            <input 
-                                v-model="salaireInput" 
-                                type="number" 
-                                step="100" 
-                                class="input" 
-                                :class="{ 
+                            <input
+                                v-model="salaireInput"
+                                type="number"
+                                step="100"
+                                class="input"
+                                :class="{
                                     'border-red-500': form.errors.salaire_base,
                                     'border-blue-500': salaireMode === 'brut',
                                     'border-green-500': salaireMode === 'net'
-                                }" 
+                                }"
                             />
                             <p v-if="form.errors.salaire_base" class="text-red-500 text-sm mt-1">{{ form.errors.salaire_base }}</p>
                         </div>
@@ -298,6 +316,8 @@ const form = useForm({
     numero_cnas: props.employe.numero_cnas || '',
     mode_paiement: props.employe.mode_paiement || 'virement',
     rib: props.employe.rib || '',
+    mode_remuneration: props.employe.mode_remuneration || 'salaire',
+    prime_par_piece: props.employe.prime_par_piece || '',
 });
 
 const salaryPreview = computed(() => {

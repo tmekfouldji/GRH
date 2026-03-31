@@ -133,6 +133,33 @@
                         </table>
                     </div>
                     
+                    <!-- Pièces Fabriquées Section (for piece employees) -->
+                    <div v-if="isPieceEmployee" class="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+                        <h3 class="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                            🏭 Prime de Rendement (à la pièce)
+                        </h3>
+                        <div class="grid grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label class="block text-xs font-medium text-purple-700 mb-1">Prime par pièce</label>
+                                <input type="number" v-model.number="primeParPieceInput"
+                                    class="input border-purple-300 focus:ring-purple-500 text-sm py-2"
+                                    min="0" step="0.01" placeholder="0.00" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-purple-700 mb-1">Pièces fabriquées</label>
+                                <input type="number" v-model.number="piecesFabriquees"
+                                    class="input border-purple-300 focus:ring-purple-500 text-sm py-2"
+                                    min="0" step="1" placeholder="0" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-purple-700 mb-1">Montant prime</label>
+                                <div class="input bg-purple-100 border-purple-300 text-purple-800 font-bold text-sm py-2">
+                                    {{ formatMoney(calculatedPrimeRendement) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Deductions Summary -->
                     <div class="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-4 border border-red-200">
                         <div class="flex items-center justify-between">
@@ -154,6 +181,10 @@
                 <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-t">
                     <div class="text-sm text-gray-600">
                         <div class="flex items-center gap-4">
+                            <div v-if="isPieceEmployee">
+                                <span class="text-xs text-gray-500">Prime pièces:</span>
+                                <span class="font-medium text-purple-600 ml-1">{{ formatMoney(calculatedPrimeRendement) }}</span>
+                            </div>
                             <div>
                                 <span class="text-xs text-gray-500">Brut proraté:</span>
                                 <span class="font-medium ml-1">{{ formatMoney(calculatedBrutProrata) }}</span>
@@ -202,6 +233,19 @@ const emit = defineEmits(['close', 'saved']);
 
 const saving = ref(false);
 const allDays = ref([]);
+const piecesFabriquees = ref(0);
+const primeParPieceInput = ref(0);
+
+// Determine if this fiche is for a piece employee
+const isPieceEmployee = computed(() => {
+    if (!props.fiche) return false;
+    return props.fiche.mode_remuneration_snapshot === 'piece' ||
+           props.fiche.employe?.mode_remuneration === 'piece';
+});
+
+const calculatedPrimeRendement = computed(() => {
+    return (primeParPieceInput.value || 0) * (piecesFabriquees.value || 0);
+});
 
 // Generate all days of the month
 const generateMonthDays = (year, month, pointages) => {
@@ -248,10 +292,14 @@ const generateMonthDays = (year, month, pointages) => {
 watch([() => props.show, () => props.fiche, () => props.pointages], ([showVal, ficheVal, pointagesVal]) => {
     if (showVal && ficheVal) {
         allDays.value = generateMonthDays(
-            parseInt(ficheVal.annee), 
-            parseInt(ficheVal.mois), 
+            parseInt(ficheVal.annee),
+            parseInt(ficheVal.mois),
             pointagesVal || []
         );
+        // Initialize pieces from fiche
+        piecesFabriquees.value = parseInt(ficheVal.pieces_fabriquees) || 0;
+        primeParPieceInput.value = parseFloat(ficheVal.prime_par_piece_snapshot) ||
+            parseFloat(ficheVal.employe?.prime_par_piece) || 0;
     }
 }, { immediate: true });
 
@@ -301,10 +349,20 @@ const calculatedRatio = computed(() => {
 const calculatedBrutProrata = computed(() => {
     if (!props.fiche) return 0;
     const salaireBase = parseFloat(props.fiche.salaire_base) || 0;
-    const primes = (parseFloat(props.fiche.prime_rendement) || 0) + 
-                   (parseFloat(props.fiche.prime_transport) || 0) +
-                   (parseFloat(props.fiche.autres_primes) || 0);
-    return (salaireBase + primes) * calculatedRatio.value;
+    const primeTransport = parseFloat(props.fiche.prime_transport) || 0;
+    const autresPrimes = parseFloat(props.fiche.autres_primes) || 0;
+    const ratio = calculatedRatio.value;
+
+    if (isPieceEmployee.value) {
+        // Piece employees: prime_rendement (from pieces) is NOT prorated
+        // salaire_base and other primes ARE prorated
+        const primeRendement = calculatedPrimeRendement.value;
+        return primeRendement + (salaireBase * ratio) + ((primeTransport + autresPrimes) * ratio);
+    }
+
+    // Salary employees: everything prorated
+    const primeRendement = parseFloat(props.fiche.prime_rendement) || 0;
+    return (salaireBase + primeRendement + primeTransport + autresPrimes) * ratio;
 });
 
 const calculatedCNAS = computed(() => calculatedBrutProrata.value * 0.09);
@@ -403,12 +461,20 @@ const save = () => {
         included: d.included,
     }));
     
-    router.post(`/fiches-paie/${props.fiche.id}/update-retards`, {
+    const postData = {
         days: daysToSave,
         total_penalty: totalPenalty.value,
         net_a_payer: calculatedNetAPayer.value,
         jours_travailles: includedWorkingDays.value,
-    }, {
+    };
+
+    // Include pieces data for piece employees
+    if (isPieceEmployee.value) {
+        postData.pieces_fabriquees = piecesFabriquees.value || 0;
+        postData.prime_par_piece = primeParPieceInput.value || 0;
+    }
+
+    router.post(`/fiches-paie/${props.fiche.id}/update-retards`, postData, {
         preserveScroll: true,
         onSuccess: () => {
             saving.value = false;

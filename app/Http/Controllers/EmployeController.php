@@ -81,7 +81,14 @@ class EmployeController extends Controller
             'numero_cnas' => 'nullable|max:30',
             'mode_paiement' => 'nullable|in:virement,especes,cheque',
             'rib' => 'nullable|max:30',
+            'mode_remuneration' => 'required|in:salaire,piece',
+            'prime_par_piece' => 'nullable|required_if:mode_remuneration,piece|numeric|min:0.01',
         ]);
+
+        // Clear prime_par_piece if mode is salaire
+        if ($validated['mode_remuneration'] === 'salaire') {
+            $validated['prime_par_piece'] = null;
+        }
 
         Employe::create($validated);
 
@@ -129,7 +136,14 @@ class EmployeController extends Controller
             'numero_cnas' => 'nullable|max:30',
             'mode_paiement' => 'nullable|in:virement,especes,cheque',
             'rib' => 'nullable|max:30',
+            'mode_remuneration' => 'required|in:salaire,piece',
+            'prime_par_piece' => 'nullable|required_if:mode_remuneration,piece|numeric|min:0.01',
         ]);
+
+        // Clear prime_par_piece if mode is salaire
+        if ($validated['mode_remuneration'] === 'salaire') {
+            $validated['prime_par_piece'] = null;
+        }
 
         $employe->update($validated);
 
