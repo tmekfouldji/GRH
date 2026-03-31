@@ -80,6 +80,8 @@ Route::middleware('auth')->group(function () {
     Route::get('paies-mensuelles/{paiesMensuelle}/rapport', [PaieMensuelleController::class, 'rapport'])->name('paies-mensuelles.rapport');
     Route::post('paies-mensuelles/{paiesMensuelle}/valider-toutes-presences', [PaieMensuelleController::class, 'validerToutesPresences'])->name('paies-mensuelles.valider-toutes-presences');
     Route::post('paies-mensuelles/{paiesMensuelle}/calculer-presences', [PaieMensuelleController::class, 'calculerToutesPresences'])->name('paies-mensuelles.calculer-presences');
+    Route::get('paies-mensuelles/{paiesMensuelle}/saisie-pieces', [PaieMensuelleController::class, 'saisiePiecesEnLot'])->name('paies-mensuelles.saisie-pieces');
+    Route::post('paies-mensuelles/{paiesMensuelle}/saisie-pieces', [PaieMensuelleController::class, 'storePiecesEnLot'])->name('paies-mensuelles.store-pieces');
 
     // Validation des présences par fiche
     Route::get('fiches-paie/{fichePaie}/validation-presences', [PaieMensuelleController::class, 'validationPresences'])->name('fiches-paie.validation-presences');

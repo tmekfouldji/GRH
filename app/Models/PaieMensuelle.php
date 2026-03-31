@@ -129,10 +129,14 @@ class PaieMensuelle extends Model
         $errors = [];
         
         foreach ($employes as $employe) {
-            // Vérifier que l'employé a un salaire de base défini
-            if (!$employe->salaire_base || $employe->salaire_base <= 0) {
+            // Vérifier que l'employé a un salaire de base défini (sauf pour les employés à la pièce)
+            if ((!$employe->salaire_base || $employe->salaire_base <= 0) && $employe->mode_remuneration !== 'piece') {
                 $errors[] = $employe->nom_complet . ' (pas de salaire de base)';
                 continue;
+            }
+            // Avertissement: employé à la pièce sans prime_par_piece définie
+            if ($employe->mode_remuneration === 'piece' && (!$employe->prime_par_piece || $employe->prime_par_piece <= 0)) {
+                $errors[] = $employe->nom_complet . ' (pièce sans prime par pièce définie)';
             }
 
             // Vérifier si une fiche existe déjà pour cet employé ce mois
@@ -144,6 +148,9 @@ class PaieMensuelle extends Model
             if ($ficheExistante) {
                 // Lier la fiche existante à cette paie
                 $ficheExistante->paie_mensuelle_id = $paie->id;
+                // Snapshot mode_remuneration and prime_par_piece from employee
+                $ficheExistante->mode_remuneration_snapshot = $employe->mode_remuneration ?? 'salaire';
+                $ficheExistante->prime_par_piece_snapshot = $employe->prime_par_piece;
                 // Recalculate presences and salary for this specific month
                 $ficheExistante->calculerPresences();
                 $ficheExistante->calculerSalaire();

@@ -62,15 +62,52 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Autres primes (DZD)</label>
-                            <input 
-                                v-model.number="autresPrimes" 
-                                type="number" 
+                            <input
+                                v-model.number="autresPrimes"
+                                type="number"
                                 min="0"
                                 step="500"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                                 placeholder="0"
                             />
                         </div>
+
+                        <div class="border-t pt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Mode de rémunération</label>
+                            <div class="flex bg-gray-100 rounded-lg p-1">
+                                <button
+                                    type="button"
+                                    @click="modeRemuneration = 'salaire'"
+                                    :class="['px-3 py-1.5 text-sm rounded-md transition-colors flex-1', modeRemuneration === 'salaire' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200']"
+                                >
+                                    Salaire
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="modeRemuneration = 'piece'"
+                                    :class="['px-3 py-1.5 text-sm rounded-md transition-colors flex-1', modeRemuneration === 'piece' ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-200']"
+                                >
+                                    Pièce
+                                </button>
+                            </div>
+                        </div>
+
+                        <template v-if="modeRemuneration === 'piece'">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Prime par pièce (DZD)</label>
+                                <input v-model.number="primePiece" type="number" min="0" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" placeholder="50" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Pièces fabriquées</label>
+                                <input v-model.number="piecesFabriquees" type="number" min="0" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none" placeholder="500" />
+                            </div>
+                            <div class="bg-purple-50 rounded-lg p-3 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-purple-700">Prime rendement (pièces)</span>
+                                    <span class="font-bold text-purple-800">{{ formatNumber(primeRendementPiece) }} DZD</span>
+                                </div>
+                            </div>
+                        </template>
 
                     </div>
                 </div>
@@ -259,13 +296,22 @@ const salaireBase = ref(50000);
 const primeTransport = ref(3000);
 const primePanier = ref(2000);
 const autresPrimes = ref(0);
+const modeRemuneration = ref('salaire');
+const primePiece = ref(50);
+const piecesFabriquees = ref(0);
+
+const primeRendementPiece = computed(() => {
+    if (modeRemuneration.value !== 'piece') return 0;
+    return (primePiece.value || 0) * (piecesFabriquees.value || 0);
+});
 
 // Use unified salary calculator
 const salaryResult = computed(() => {
+    const extras = modeRemuneration.value === 'piece' ? primeRendementPiece.value : 0;
     return calculateFromBrut(salaireBase.value, {
         primeTransport: primeTransport.value,
         primePanier: primePanier.value,
-        autresPrimes: autresPrimes.value,
+        autresPrimes: autresPrimes.value + extras,
     });
 });
 

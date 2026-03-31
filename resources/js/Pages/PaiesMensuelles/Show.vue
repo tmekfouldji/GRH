@@ -32,6 +32,14 @@
                     Clôturer
                 </button>
                 
+                <Link
+                    v-if="hasPieceEmployees && paie.statut !== 'cloture'"
+                    :href="`/paies-mensuelles/${paie.id}/saisie-pieces`"
+                    class="btn btn-secondary flex items-center gap-2"
+                >
+                    <Puzzle class="w-4 h-4" />
+                    Saisie des pièces
+                </Link>
                 <button v-if="paie.statut === 'brouillon'" @click="syncAllEmployeData" class="btn btn-secondary flex items-center gap-2">
                     <RefreshCw class="w-4 h-4" />
                     Sync employés
@@ -201,6 +209,7 @@
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employé</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Présences</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">H.Sup</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Brut</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net à Payer</th>
@@ -222,6 +231,13 @@
                                     <span class="text-green-600">{{ fiche.jours_travailles }}j</span>
                                     <span v-if="fiche.jours_absence > 0" class="text-red-600 ml-1">-{{ fiche.jours_absence }}abs</span>
                                 </div>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <template v-if="fiche.montant_heures_supplementaires > 0">
+                                    <span class="text-amber-700 font-medium text-sm">{{ formatMoney(fiche.montant_heures_supplementaires) }}</span>
+                                    <p class="text-xs text-gray-400">{{ fiche.heures_supplementaires }}h</p>
+                                </template>
+                                <span v-else class="text-gray-300 text-sm">-</span>
                             </td>
                             <td class="px-4 py-3 text-right font-medium">{{ formatMoney(fiche.salaire_brut) }}</td>
                             <td class="px-4 py-3 text-right text-gray-600">{{ formatMoney(fiche.salaire_net) }}</td>
@@ -313,9 +329,9 @@
 <script setup>
 import { ref, reactive, computed } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { 
-    ArrowLeft, CheckCircle, Play, Lock, Printer, FileText, 
-    Trash2, Eye, AlertTriangle, ClipboardCheck, Clock, RefreshCw 
+import {
+    ArrowLeft, CheckCircle, Play, Lock, Printer, FileText,
+    Trash2, Eye, AlertTriangle, ClipboardCheck, Clock, RefreshCw, Puzzle
 } from 'lucide-vue-next';
 import { formatMoney, formatDate } from '@/utils/formatters';
 import GestionRetardsModal from '@/Components/GestionRetardsModal.vue';
@@ -337,6 +353,11 @@ const validationStats = computed(() => {
         valide: fiches.filter(f => f.statut_validation === 'valide').length,
         ajuste: fiches.filter(f => f.statut_validation === 'ajuste').length,
     };
+});
+
+const hasPieceEmployees = computed(() => {
+    const fiches = props.paie.fiches_paie || [];
+    return fiches.some(f => f.mode_remuneration_snapshot === 'piece');
 });
 
 const totalNetAPayer = computed(() => {

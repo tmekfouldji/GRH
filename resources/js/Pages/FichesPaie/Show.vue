@@ -16,6 +16,14 @@
             </div>
         </div>
         
+        <!-- Warnings -->
+        <div v-if="warnings && warnings.length > 0" class="bg-orange-50 border border-orange-300 rounded-lg p-4">
+            <div v-for="(warning, i) in warnings" :key="i" class="flex items-start gap-2 text-sm text-orange-800">
+                <span class="font-bold">⚠️</span>
+                <span>{{ warning }}</span>
+            </div>
+        </div>
+
         <!-- Fiche de paie -->
         <div class="card">
             <div class="border-b pb-4 mb-6">
@@ -56,9 +64,27 @@
                             <span class="text-gray-600">Salaire de base</span>
                             <span class="font-medium">{{ formatMoney(fichePaie.salaire_base) }}</span>
                         </div>
-                        <div v-if="fichePaie.prime_rendement > 0" class="flex justify-between">
-                            <span class="text-gray-600">Prime de rendement</span>
-                            <span class="font-medium">{{ formatMoney(fichePaie.prime_rendement) }}</span>
+                        <div v-if="fichePaie.montant_heures_supplementaires > 0" class="bg-amber-50 rounded-lg p-3 space-y-1">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Heures supplémentaires ({{ fichePaie.heures_supplementaires }}h × {{ formatMoney(tauxHoraireBase) }}/h × 1.5)</span>
+                                <span class="font-medium text-amber-700">{{ formatMoney(fichePaie.montant_heures_supplementaires) }}</span>
+                            </div>
+                            <div class="text-xs text-gray-500 flex gap-4">
+                                <span>Taux horaire de base: {{ formatMoney(tauxHoraireBase) }}/h</span>
+                                <span>Taux majoré (×1.5): {{ formatMoney(tauxHoraireBase * 1.5) }}/h</span>
+                            </div>
+                        </div>
+                        <div v-if="fichePaie.prime_rendement > 0" class="bg-purple-50 rounded-lg p-3 space-y-1">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Prime de rendement</span>
+                                <span class="font-medium text-purple-700">{{ formatMoney(fichePaie.prime_rendement) }}</span>
+                            </div>
+                            <div v-if="fichePaie.mode_remuneration_snapshot === 'piece'" class="text-xs text-gray-500">
+                                {{ fichePaie.pieces_fabriquees || 0 }} pièces × {{ formatMoney(fichePaie.prime_par_piece_snapshot) }}/pièce
+                            </div>
+                            <div v-else class="text-xs text-gray-500">
+                                Montant saisi manuellement
+                            </div>
                         </div>
                         <div v-if="fichePaie.prime_transport > 0" class="flex justify-between">
                             <span class="text-gray-600">Prime de transport</span>
@@ -140,8 +166,21 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, Pencil, Printer } from 'lucide-vue-next';
 import { formatMoney, getMonthName } from '@/utils/formatters';
+import { computed } from 'vue';
 
-const props = defineProps({ fichePaie: Object });
+const props = defineProps({
+    fichePaie: Object,
+    warnings: { type: Array, default: () => [] },
+});
+
+const tauxHoraireBase = computed(() => {
+    const montant = props.fichePaie.montant_heures_supplementaires || 0;
+    const heures = props.fichePaie.heures_supplementaires || 0;
+    if (montant > 0 && heures > 0) {
+        return montant / (heures * 1.5);
+    }
+    return 0;
+});
 
 const getMoisNom = (mois) => getMonthName(mois);
 const getStatutClass = (statut) => ({ brouillon: 'bg-gray-100 text-gray-800', valide: 'bg-yellow-100 text-yellow-800', paye: 'bg-green-100 text-green-800' }[statut] || 'bg-gray-100 text-gray-800');

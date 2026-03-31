@@ -20,7 +20,15 @@
                 <div class="border-t pt-4">
                     <h3 class="text-sm font-medium text-gray-700 mb-3">Primes</h3>
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
+                        <div v-if="fichePaie.mode_remuneration_snapshot === 'piece'">
+                            <label class="block text-sm text-gray-600 mb-1">Pièces fabriquées</label>
+                            <input v-model="form.pieces_fabriquees" type="number" min="0" step="1" class="input" />
+                            <p class="text-xs text-gray-400 mt-1">
+                                Prime: {{ fichePaie.prime_par_piece_snapshot }} DZD/pièce
+                                = {{ formatNumber((fichePaie.prime_par_piece_snapshot || 0) * (form.pieces_fabriquees || 0)) }} DZD
+                            </p>
+                        </div>
+                        <div v-else>
                             <label class="block text-sm text-gray-600 mb-1">Prime de rendement</label>
                             <input v-model="form.prime_rendement" type="number" step="0.01" class="input" />
                         </div>
@@ -79,12 +87,15 @@ const moisNoms = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juille
 const form = useForm({
     salaire_base: props.fichePaie.salaire_base,
     prime_rendement: props.fichePaie.prime_rendement || 0,
+    pieces_fabriquees: props.fichePaie.pieces_fabriquees || 0,
     prime_transport: props.fichePaie.prime_transport || 0,
     prime_panier: props.fichePaie.prime_panier || 0,
     autres_primes: props.fichePaie.autres_primes || 0,
     autres_deductions: props.fichePaie.autres_deductions || 0,
     statut: props.fichePaie.statut,
 });
+
+const formatNumber = (val) => new Intl.NumberFormat('fr-DZ').format(Math.round(val || 0));
 
 const getMoisNom = (mois) => moisNoms[mois - 1] || '';
 const submit = () => form.put(`/fiches-paie/${props.fichePaie.id}`);

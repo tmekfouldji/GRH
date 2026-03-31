@@ -402,4 +402,60 @@ class PaieMensuelleController extends Controller
 
         return redirect()->back()->with('success', 'Pointage modifié avec succès.');
     }
+
+    /**
+     * Afficher la page de saisie des pièces en lot
+     */
+    public function saisiePiecesEnLot(PaieMensuelle $paiesMensuelle)
+    {
+        $paiesMensuelle->load(['fichesPaie.employe']);
+
+        $fichesPiece = $paiesMensuelle->fichesPaie
+            ->filter(fn($f) => $f->mode_remuneration_snapshot === 'piece')
+            ->map(fn($f) => [
+                'id' => $f->id,
+                'employe_matricule' => $f->employe->matricule ?? '',
+                'employe_nom' => $f->employe->nom ?? '',
+                'employe_prenom' => $f->employe->prenom ?? '',
+                'prime_par_piece_snapshot' => $f->prime_par_piece_snapshot,
+                'pieces_fabriquees' => $f->pieces_fabriquees ?? 0,
+                'prime_rendement' => $f->prime_rendement,
+            ])
+            ->values();
+
+        return Inertia::render('PaiesMensuelles/SaisiePieces', [
+            'paie' => $paiesMensuelle,
+            'fichesPiece' => $fichesPiece,
+        ]);
+    }
+
+    /**
+     * Enregistrer les pièces en lot
+     */
+    public function storePiecesEnLot(Request $request, PaieMensuelle $paiesMensuelle)
+    {
+        $validated = $request->validate([
+            'pieces' => 'required|array',
+            'pieces.*.fiche_id' => 'required|integer|exists:fiches_paie,id',
+            'pieces.*.pieces_fabriquees' => 'required|integer|min:0',
+        ]);
+
+        foreach ($validated['pieces'] as $entry) {
+            $fiche = FichePaie::findOrFail($entry['fiche_id']);
+
+            // Verify this fiche belongs to this paie
+            if ($fiche->paie_mensuelle_id !== $paiesMensuelle->id) {
+                continue;
+            }
+
+            $fiche->pieces_fabriquees = $entry['pieces_fabriquees'];
+            $fiche->calculerSalaire();
+            $fiche->save();
+        }
+
+        $paiesMensuelle->recalculerTotaux();
+
+        return redirect()->route('paies-mensuelles.show', $paiesMensuelle)
+            ->with('success', 'Pièces fabriquées enregistrées et salaires recalculés.');
+    }
 }

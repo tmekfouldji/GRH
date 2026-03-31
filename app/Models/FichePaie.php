@@ -49,12 +49,19 @@ class FichePaie extends Model
         'date_remise',
         'remis_par',
         'date_paiement',
+        'montant_heures_supplementaires',
+        'pieces_fabriquees',
+        'prime_par_piece_snapshot',
+        'mode_remuneration_snapshot',
     ];
 
     protected $casts = [
         'salaire_base' => 'decimal:2',
         'heures_normales' => 'decimal:2',
         'heures_supplementaires' => 'decimal:2',
+        'montant_heures_supplementaires' => 'decimal:2',
+        'pieces_fabriquees' => 'integer',
+        'prime_par_piece_snapshot' => 'decimal:2',
         'prime_anciennete' => 'decimal:2',
         'prime_rendement' => 'decimal:2',
         'prime_transport' => 'decimal:2',
@@ -294,36 +301,66 @@ class FichePaie extends Model
     {
         // Ratio de présence (jours travaillés + justifiés / jours ouvrés)
         $ratio = $this->ratio_presence;
-        
-        // Total des primes (valeur complète du mois)
-        $total_primes = $this->prime_anciennete + $this->prime_rendement + 
-                        $this->prime_transport + $this->autres_primes;
-        
-        // Salaire brut complet (pour référence)
-        $brut_complet = $this->salaire_base + $total_primes;
-        
-        // Salaire brut proraté selon présences
-        $this->salaire_brut = round($brut_complet * $ratio, 2);
-        
-        // Cotisation CNAS salariale: 9% du salaire brut proraté
+        $jours_ouvres = $this->getJoursOuvresDuMois();
+
+        // --- Heures supplémentaires majorées à 50% ---
+        $heures_sup = $this->heures_supplementaires ?? 0;
+        $salaire_base = $this->salaire_base ?? 0;
+
+        if ($salaire_base > 0 && $jours_ouvres > 0 && $heures_sup > 0) {
+            $taux_horaire = $salaire_base / ($jours_ouvres * 8);
+            $this->montant_heures_supplementaires = round($heures_sup * $taux_horaire * 1.5, 2);
+        } else {
+            $this->montant_heures_supplementaires = 0;
+        }
+
+        // --- Calcul selon le mode de rémunération ---
+        $mode = $this->mode_remuneration_snapshot ?? 'salaire';
+
+        // Total des primes (hors prime_rendement pour les employés "piece" car elle est calculée)
+        $total_primes_fixes = $this->prime_anciennete + $this->prime_transport + $this->autres_primes;
+
+        if ($mode === 'piece') {
+            // Employé "à la pièce": prime_rendement = prime_par_piece × pieces_fabriquees
+            $pieces = $this->pieces_fabriquees ?? 0;
+            $prime_piece = $this->prime_par_piece_snapshot ?? 0;
+            $this->prime_rendement = round($prime_piece * $pieces, 2);
+
+            // Salaire brut: prime_rendement (NON proratée) + salaire_base (proraté) + primes fixes (proratées) + heures sup
+            $this->salaire_brut = round(
+                $this->prime_rendement
+                + ($salaire_base * $ratio)
+                + ($total_primes_fixes * $ratio)
+                + $this->montant_heures_supplementaires,
+            2);
+        } else {
+            // Employé "au salaire": calcul standard
+            $total_primes = $total_primes_fixes + $this->prime_rendement;
+            $brut_complet = $salaire_base + $total_primes;
+
+            // Salaire brut proraté + heures sup
+            $this->salaire_brut = round(($brut_complet * $ratio) + $this->montant_heures_supplementaires, 2);
+        }
+
+        // Cotisation CNAS salariale: 9% du salaire brut
         $this->cotisation_cnss = round($this->salaire_brut * 0.09, 2);
-        
+
         // Pas de cotisation AMO séparée en Algérie (incluse dans CNAS)
         $this->cotisation_amo = 0;
-        
-        // Salaire Net Imposable (SNI) = Brut proraté - Cotisations sociales
+
+        // Salaire Net Imposable (SNI) = Brut - Cotisations sociales
         $salaire_imposable = $this->salaire_brut - $this->cotisation_cnss;
-        
+
         // IRG (Impôt sur le Revenu Global) selon barème algérien
         $this->ir = $this->calculerIRG($salaire_imposable);
-        
-        // Total déductions (sur montants proratés)
-        $this->total_deductions = round($this->cotisation_cnss + $this->cotisation_amo + 
+
+        // Total déductions
+        $this->total_deductions = round($this->cotisation_cnss + $this->cotisation_amo +
                                   $this->ir + $this->autres_deductions, 2);
-        
-        // Salaire net (déjà proraté)
+
+        // Salaire net
         $this->salaire_net = round($this->salaire_brut - $this->total_deductions, 2);
-        
+
         return $this;
     }
 

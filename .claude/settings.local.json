@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.specify/scripts/powershell/create-new-feature.ps1 \"i want you to study the whole project and get a full deep understanding of everything especially the things related to paies mensuelles\nthen i want you to do some changes that i'm gonna describe below\n\n1 - heures supplementaires : +50 % du salaire a definir sur les fiches dans les paies mensuelles la ou detaille les heures travaillées\n2 - prime de rendement par piece fabriquée ou bien par montant \\(selon la categorie de l'employé qu'on va detailler dans le point suivant\\) aussi il faut trouver un endroit ou les placer\n3 - catégorie employé : a la piece ou salaire \na la piece ça veut dire salaire = \\(prime par piece * pieces fabriquées\\) + salaire de base si il n'est pas egal a 0, la prime par piece est definie dans la fiche employé si la categorie est selectionnée\n4 - fixer les heures de GMT a WAT dans toutes la plateforme \n\nje veux que tu va en detail du detail dans chaque point \nrevise tous les scenarios possibles et toutes les erreurs possibles \net ne t'arrete pas jusqu'a ce que tout soit bien claire sans aucune embiguité\" --json --short-name \"payroll-overtime-categories\" \"Heures supplémentaires, primes rendement, catégories employé et timezone WAT\")",
+      "Bash(.specify/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly)",
+      "Bash(.specify/scripts/powershell/setup-plan.ps1 -Json)",
+      "Bash(*)",
+      "Bash(find /c/Users/tmekf/dev/textile -name .env* -type f)",
+      "Bash(.specify/scripts/powershell/update-agent-context.ps1 -AgentType claude)",
+      "Bash(.specify/scripts/powershell/check-prerequisites.ps1 -Json)",
+      "Bash(.specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks)",
+      "Bash(php artisan:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

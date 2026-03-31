@@ -102,7 +102,16 @@ class FichePaieController extends Controller
     public function show(FichePaie $fichesPaie)
     {
         $fichesPaie->load('employe');
-        return Inertia::render('FichesPaie/Show', ['fichePaie' => $fichesPaie]);
+
+        $warnings = [];
+        if ($fichesPaie->employe && $fichesPaie->mode_remuneration_snapshot !== $fichesPaie->employe->mode_remuneration) {
+            $warnings[] = "Le mode de rémunération de l'employé a changé depuis la génération de cette fiche (fiche: {$fichesPaie->mode_remuneration_snapshot}, actuel: {$fichesPaie->employe->mode_remuneration}).";
+        }
+
+        return Inertia::render('FichesPaie/Show', [
+            'fichePaie' => $fichesPaie,
+            'warnings' => $warnings,
+        ]);
     }
 
     public function edit(FichePaie $fichesPaie)
@@ -113,14 +122,21 @@ class FichePaieController extends Controller
 
     public function update(Request $request, FichePaie $fichesPaie)
     {
-        $validated = $request->validate([
+        $rules = [
             'salaire_base' => 'required|numeric|min:0',
-            'prime_rendement' => 'nullable|numeric|min:0',
             'prime_transport' => 'nullable|numeric|min:0',
             'autres_primes' => 'nullable|numeric|min:0',
             'autres_deductions' => 'nullable|numeric|min:0',
             'statut' => 'required|in:brouillon,valide,paye',
-        ]);
+        ];
+
+        if ($fichesPaie->mode_remuneration_snapshot === 'piece') {
+            $rules['pieces_fabriquees'] = 'nullable|integer|min:0';
+        } else {
+            $rules['prime_rendement'] = 'nullable|numeric|min:0';
+        }
+
+        $validated = $request->validate($rules);
 
         $fichesPaie->fill($validated);
         $fichesPaie->calculerSalaire();
@@ -218,29 +234,33 @@ class FichePaieController extends Controller
         $sheet->setTitle('Fiches de Paie');
 
         // En-têtes
-        $headers = ['Matricule', 'Nom', 'Prénom', 'Période', 'Salaire Base', 'Primes', 
-                    'Salaire Brut', 'Déductions', 'Salaire Net', 'Statut'];
+        $headers = ['Matricule', 'Nom', 'Prénom', 'Période', 'Mode Rémun.', 'Salaire Base',
+                    'H.Sup Montant', 'Pièces', 'Primes', 'Salaire Brut', 'Déductions', 'Salaire Net', 'Statut'];
         $sheet->fromArray($headers, null, 'A1');
 
         // Style des en-têtes
-        $sheet->getStyle('A1:J1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:J1')->getFill()
+        $lastCol = 'M';
+        $sheet->getStyle("A1:{$lastCol}1")->getFont()->setBold(true);
+        $sheet->getStyle("A1:{$lastCol}1")->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('4472C4');
-        $sheet->getStyle('A1:J1')->getFont()->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle("A1:{$lastCol}1")->getFont()->getColor()->setRGB('FFFFFF');
 
         // Données
         $row = 2;
         foreach ($fichesPaie as $fiche) {
-            $totalPrimes = $fiche->prime_anciennete + $fiche->prime_rendement + 
+            $totalPrimes = $fiche->prime_anciennete + $fiche->prime_rendement +
                           $fiche->prime_transport + $fiche->autres_primes;
-            
+
             $sheet->fromArray([
                 $fiche->employe->matricule,
                 $fiche->employe->nom,
                 $fiche->employe->prenom,
                 $fiche->periode,
+                $fiche->mode_remuneration_snapshot === 'piece' ? 'Pièce' : 'Salaire',
                 $fiche->salaire_base,
+                $fiche->montant_heures_supplementaires,
+                $fiche->pieces_fabriquees,
                 $totalPrimes,
                 $fiche->salaire_brut,
                 $fiche->total_deductions,
@@ -251,7 +271,7 @@ class FichePaieController extends Controller
         }
 
         // Auto-size columns
-        foreach (range('A', 'J') as $col) {
+        foreach (range('A', $lastCol) as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -470,6 +490,8 @@ class FichePaieController extends Controller
         $fichePaie->prime_rendement = $employe->prime_rendement ?? 0;
         $fichePaie->prime_transport = $employe->prime_transport ?? 0;
         $fichePaie->autres_primes = $employe->autres_primes ?? 0;
+        $fichePaie->mode_remuneration_snapshot = $employe->mode_remuneration ?? 'salaire';
+        $fichePaie->prime_par_piece_snapshot = $employe->prime_par_piece;
         
         // Recalculate salary with new data
         $fichePaie->calculerSalaire();
