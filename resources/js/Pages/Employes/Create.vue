@@ -101,6 +101,33 @@
                         <span v-else class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">Non déclaré (pas de taxes)</span>
                     </div>
 
+                    <!-- Toggle Brut/Net -->
+                    <div v-if="form.est_declare" class="mb-4 flex items-center gap-4">
+                        <span class="text-sm text-gray-600">Mode de saisie:</span>
+                        <div class="flex bg-gray-100 rounded-lg p-1">
+                            <button
+                                type="button"
+                                @click="salaireMode = 'brut'"
+                                :class="[
+                                    'px-4 py-1.5 text-sm rounded-md transition-colors',
+                                    salaireMode === 'brut' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                                ]"
+                            >
+                                Salaire Brut
+                            </button>
+                            <button
+                                type="button"
+                                @click="salaireMode = 'net'"
+                                :class="[
+                                    'px-4 py-1.5 text-sm rounded-md transition-colors',
+                                    salaireMode === 'net' ? 'bg-green-600 text-white' : 'text-gray-600 hover:bg-gray-200'
+                                ]"
+                            >
+                                Salaire Net
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Mode de rémunération -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
@@ -121,22 +148,23 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Salaire de base (DZD) *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                {{ form.est_declare && salaireMode === 'net' ? 'Salaire Net souhaité' : 'Salaire de base' }} (DZD) *
+                            </label>
                             <input
-                                v-model.number="form.salaire_base"
+                                v-model.number="salaireInput"
                                 type="number"
-                                min="0"
+                                step="100"
                                 class="input"
                                 :class="{ 'border-red-500': form.errors.salaire_base }"
                                 placeholder="Ex: 35000"
                             />
                             <p v-if="form.errors.salaire_base" class="text-red-500 text-sm mt-1">{{ form.errors.salaire_base }}</p>
-                            <p class="text-xs text-gray-400 mt-1">SNMG: 20,000 DZD</p>
                         </div>
                     </div>
 
                     <!-- Aperçu salaire -->
-                    <div v-if="form.salaire_base > 0" class="mt-4 p-4 rounded-lg" :class="form.est_declare ? 'bg-blue-50' : 'bg-orange-50'">
+                    <div v-if="salaireInput > 0" class="mt-4 p-4 rounded-lg" :class="form.est_declare ? (salaireMode === 'brut' ? 'bg-blue-50' : 'bg-green-50') : 'bg-orange-50'">
                         <p class="text-sm font-medium text-gray-700 mb-3">Récapitulatif</p>
                         <div v-if="form.est_declare" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
@@ -159,7 +187,7 @@
                         <div v-else class="text-sm">
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-600">Salaire (pas de taxes)</span>
-                                <span class="font-bold text-green-600 text-lg">{{ formatNumber(form.salaire_base) }} DZD</span>
+                                <span class="font-bold text-green-600 text-lg">{{ formatNumber(salaireInput) }} DZD</span>
                             </div>
                         </div>
                     </div>
@@ -261,10 +289,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { X, Loader2, Info } from 'lucide-vue-next';
-import { calculateFromBrut, formatMoney } from '@/utils/salaryCalculator';
+import { calculateFromBrut, calculateFromNet } from '@/utils/salaryCalculator';
+
+const salaireMode = ref('brut');
+const salaireInput = ref(0);
 
 const form = useForm({
     matricule: '',
@@ -290,10 +321,14 @@ const form = useForm({
 });
 
 const salaryPreview = computed(() => {
-    const input = parseFloat(form.salaire_base) || 0;
+    const input = parseFloat(salaireInput.value) || 0;
 
     if (!form.est_declare) {
         return { totalBrut: input, cotisationCNAS: 0, irg: 0, salaireNet: input, salaireBrut: input };
+    }
+
+    if (salaireMode.value === 'net') {
+        return calculateFromNet(input);
     }
 
     return calculateFromBrut(input);
@@ -304,6 +339,12 @@ const formatNumber = (num) => {
 };
 
 const submit = () => {
+    // Always send the brut salary to the backend
+    if (form.est_declare && salaireMode.value === 'net') {
+        form.salaire_base = salaryPreview.value.salaireBrut;
+    } else {
+        form.salaire_base = parseFloat(salaireInput.value) || 0;
+    }
     form.post('/employes');
 };
 </script>

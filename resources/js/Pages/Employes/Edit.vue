@@ -152,7 +152,7 @@
                                 {{ form.est_declare && salaireMode === 'net' ? 'Salaire Net souhaité' : 'Salaire de base' }} (DZD) *
                             </label>
                             <input
-                                v-model.number="form.salaire_base"
+                                v-model.number="salaireInput"
                                 type="number"
                                 step="100"
                                 class="input"
@@ -290,14 +290,17 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { X, Loader2, Info } from 'lucide-vue-next';
-import { calculateFromBrut, formatMoney } from '@/utils/salaryCalculator';
+import { calculateFromBrut, calculateFromNet } from '@/utils/salaryCalculator';
 
 const props = defineProps({
     employe: Object,
 });
+
+const salaireMode = ref('brut');
+const salaireInput = ref(props.employe.salaire_base || 0);
 
 const form = useForm({
     matricule: props.employe.matricule,
@@ -323,10 +326,14 @@ const form = useForm({
 });
 
 const salaryPreview = computed(() => {
-    const input = parseFloat(form.salaire_base) || 0;
+    const input = parseFloat(salaireInput.value) || 0;
 
     if (!form.est_declare) {
         return { totalBrut: input, cotisationCNAS: 0, irg: 0, salaireNet: input, salaireBrut: input };
+    }
+
+    if (salaireMode.value === 'net') {
+        return calculateFromNet(input);
     }
 
     return calculateFromBrut(input);
@@ -337,6 +344,12 @@ const formatNumber = (num) => {
 };
 
 const submit = () => {
+    // Always send the brut salary to the backend
+    if (form.est_declare && salaireMode.value === 'net') {
+        form.salaire_base = salaryPreview.value.salaireBrut;
+    } else {
+        form.salaire_base = parseFloat(salaireInput.value) || 0;
+    }
     form.put(`/employes/${props.employe.id}`);
 };
 </script>
