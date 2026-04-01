@@ -21,6 +21,7 @@ class FichePaie extends Model
         'heures_normales',
         'heures_supplementaires',
         'jours_travailles',
+        'jours_ponderes',
         'jours_absence',
         'jours_justifies',
         'prime_anciennete',
@@ -72,6 +73,7 @@ class FichePaie extends Model
         'autres_deductions' => 'decimal:2',
         'deduction_retard' => 'decimal:2',
         'deduction_absence' => 'decimal:2',
+        'jours_ponderes' => 'decimal:2',
         'minutes_retard' => 'integer',
         'total_deductions' => 'decimal:2',
         'salaire_net' => 'decimal:2',
@@ -265,14 +267,19 @@ class FichePaie extends Model
     public function getRatioPresenceAttribute()
     {
         $jours_ouvres = $this->getJoursOuvresDuMois();
-        $jours_travailles = $this->jours_travailles ?? 0;
         $jours_justifies = $this->jours_justifies ?? 0;
-        $jours_payes = $jours_travailles + $jours_justifies;
-        
+
         if ($jours_ouvres == 0) {
             $jours_ouvres = 22;
         }
-        
+
+        // Use weighted days (with Friday x2, Saturday x1.5 coefficients) if available
+        if ($this->jours_ponderes !== null && $this->jours_ponderes > 0) {
+            $jours_payes = $this->jours_ponderes + $jours_justifies;
+        } else {
+            $jours_payes = ($this->jours_travailles ?? 0) + $jours_justifies;
+        }
+
         return min(1, $jours_payes / $jours_ouvres);
     }
 
