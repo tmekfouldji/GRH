@@ -198,6 +198,10 @@
                                 <span class="text-xs text-gray-500">CNAS:</span>
                                 <span class="font-medium text-red-600 ml-1">-{{ formatMoney(calculatedCNAS) }}</span>
                             </div>
+                            <div v-if="totalOvertimeHours > 0">
+                                <span class="text-xs text-gray-500">H.Sup ({{ Math.round(totalOvertimeHours * 100) / 100 }}h):</span>
+                                <span class="font-medium text-blue-600 ml-1">+{{ formatMoney(calculatedOvertimeAmount) }}</span>
+                            </div>
                             <div>
                                 <span class="text-xs text-gray-500">Pénalités:</span>
                                 <span class="font-medium text-red-600 ml-1">-{{ formatMoney(totalPenalty) }}</span>
@@ -206,7 +210,7 @@
                                 <span class="font-bold text-green-600">Net à payer: {{ formatMoney(calculatedNetAPayer) }}</span>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">{{ includedWorkingDays }} jours inclus ({{ weightedIncludedDays }}/{{ workingDaysInMonth }} pondérés = {{ Math.round(calculatedRatio * 100) }}%)</p>
+                        <p class="text-xs text-gray-400 mt-1">{{ includedWorkingDays }} jours inclus ({{ Math.round(weightedIncludedDays * 100) / 100 }}/{{ workingDaysInMonth }} pondérés = {{ Math.round(calculatedRatio * 100) }}%)</p>
                     </div>
                     <div class="flex gap-3">
                         <button @click="close" class="btn btn-secondary">Annuler</button>
@@ -349,15 +353,46 @@ const includedWorkingDays = computed(() =>
 );
 
 // Weighted days: Friday x2, Saturday x1.5
+// If entry/exit times are provided, prorate the coefficient based on hours worked vs 8h standard day
+const STANDARD_HOURS = 8;
 const weightedIncludedDays = computed(() =>
     allDays.value
         .filter(d => d.included && d.statut !== 'absent')
-        .reduce((sum, d) => sum + d.coefficient, 0)
+        .reduce((sum, d) => {
+            const hours = parseFloat(d.heures_travaillees) || 0;
+            const hasTimes = d.heure_entree && d.heure_sortie;
+            if (hasTimes && hours > 0) {
+                // Prorate: if worked 4h out of 8h, count as 0.5 of the day's coefficient
+                const ratio = Math.min(hours / STANDARD_HOURS, 1);
+                return sum + (d.coefficient * ratio);
+            }
+            // No times entered: count the full day coefficient
+            return sum + d.coefficient;
+        }, 0)
 );
 
 const calculatedRatio = computed(() => {
     const total = workingDaysInMonth.value || 22;
     return weightedIncludedDays.value / total;
+});
+
+// Total overtime hours from all included days (hours beyond 8h per day)
+const totalOvertimeHours = computed(() =>
+    allDays.value
+        .filter(d => d.included && d.statut !== 'absent' && d.heure_entree && d.heure_sortie)
+        .reduce((sum, d) => {
+            const hours = parseFloat(d.heures_travaillees) || 0;
+            return sum + Math.max(hours - STANDARD_HOURS, 0);
+        }, 0)
+);
+
+// Overtime amount: taux_horaire × overtime_hours × 1.5
+const calculatedOvertimeAmount = computed(() => {
+    if (!props.fiche || totalOvertimeHours.value <= 0) return 0;
+    const salaireBase = parseFloat(props.fiche.salaire_base) || 0;
+    const joursOuvres = workingDaysInMonth.value || 22;
+    const tauxHoraire = salaireBase / (joursOuvres * STANDARD_HOURS);
+    return Math.round(totalOvertimeHours.value * tauxHoraire * 1.5 * 100) / 100;
 });
 
 // Calculate prorated salary with CNAS/IRG (matching backend logic)
@@ -366,14 +401,15 @@ const calculatedBrutProrata = computed(() => {
     const salaireBase = parseFloat(props.fiche.salaire_base) || 0;
     const autresPrimes = parseFloat(props.fiche.autres_primes) || 0;
     const ratio = calculatedRatio.value;
+    const heuresSup = calculatedOvertimeAmount.value;
 
     if (isPieceEmployee.value) {
         const primeRendement = calculatedPrimeRendement.value;
-        return primeRendement + (salaireBase * ratio) + (autresPrimes * ratio);
+        return primeRendement + (salaireBase * ratio) + (autresPrimes * ratio) + heuresSup;
     }
 
     const primeRendement = parseFloat(props.fiche.prime_rendement) || 0;
-    return (salaireBase + primeRendement + autresPrimes) * ratio;
+    return (salaireBase + primeRendement + autresPrimes) * ratio + heuresSup;
 });
 
 const estDeclare = computed(() => props.fiche?.est_declare_snapshot ?? true);
@@ -476,7 +512,7 @@ const save = () => {
         total_penalty: totalPenalty.value,
         net_a_payer: calculatedNetAPayer.value,
         jours_travailles: includedWorkingDays.value,
-        jours_ponderes: weightedIncludedDays.value,
+        jours_ponderes: Math.round(weightedIncludedDays.value * 100) / 100,
     };
 
     // Include pieces data for piece employees
