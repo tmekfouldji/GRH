@@ -447,6 +447,15 @@ class FichePaieController extends Controller
             }
         }
 
+        // Sum overtime hours from all pointages for this month and update fiche
+        $totalHeuresSup = Pointage::where('employe_id', $fichePaie->employe_id)
+            ->whereBetween('date_pointage', [
+                $fichePaie->annee . '-' . str_pad($fichePaie->mois, 2, '0', STR_PAD_LEFT) . '-01',
+                $fichePaie->annee . '-' . str_pad($fichePaie->mois, 2, '0', STR_PAD_LEFT) . '-31',
+            ])
+            ->sum('heures_supplementaires');
+        $fichePaie->heures_supplementaires = round($totalHeuresSup, 2);
+
         // Update jours_travailles and jours_ponderes FIRST (affects ratio_presence for calculerSalaire)
         if (isset($validated['jours_travailles'])) {
             $fichePaie->jours_travailles = $validated['jours_travailles'];

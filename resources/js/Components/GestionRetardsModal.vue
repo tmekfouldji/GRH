@@ -198,6 +198,10 @@
                                 <span class="text-xs text-gray-500">CNAS:</span>
                                 <span class="font-medium text-red-600 ml-1">-{{ formatMoney(calculatedCNAS) }}</span>
                             </div>
+                            <div v-if="totalOvertimeHours > 0">
+                                <span class="text-xs text-gray-500">H.Sup ({{ Math.round(totalOvertimeHours * 100) / 100 }}h):</span>
+                                <span class="font-medium text-blue-600 ml-1">+{{ formatMoney(calculatedOvertimeAmount) }}</span>
+                            </div>
                             <div>
                                 <span class="text-xs text-gray-500">Pénalités:</span>
                                 <span class="font-medium text-red-600 ml-1">-{{ formatMoney(totalPenalty) }}</span>
@@ -372,20 +376,40 @@ const calculatedRatio = computed(() => {
     return weightedIncludedDays.value / total;
 });
 
+// Total overtime hours from all included days (hours beyond 8h per day)
+const totalOvertimeHours = computed(() =>
+    allDays.value
+        .filter(d => d.included && d.statut !== 'absent' && d.heure_entree && d.heure_sortie)
+        .reduce((sum, d) => {
+            const hours = parseFloat(d.heures_travaillees) || 0;
+            return sum + Math.max(hours - STANDARD_HOURS, 0);
+        }, 0)
+);
+
+// Overtime amount: taux_horaire × overtime_hours × 1.5
+const calculatedOvertimeAmount = computed(() => {
+    if (!props.fiche || totalOvertimeHours.value <= 0) return 0;
+    const salaireBase = parseFloat(props.fiche.salaire_base) || 0;
+    const joursOuvres = workingDaysInMonth.value || 22;
+    const tauxHoraire = salaireBase / (joursOuvres * STANDARD_HOURS);
+    return Math.round(totalOvertimeHours.value * tauxHoraire * 1.5 * 100) / 100;
+});
+
 // Calculate prorated salary with CNAS/IRG (matching backend logic)
 const calculatedBrutProrata = computed(() => {
     if (!props.fiche) return 0;
     const salaireBase = parseFloat(props.fiche.salaire_base) || 0;
     const autresPrimes = parseFloat(props.fiche.autres_primes) || 0;
     const ratio = calculatedRatio.value;
+    const heuresSup = calculatedOvertimeAmount.value;
 
     if (isPieceEmployee.value) {
         const primeRendement = calculatedPrimeRendement.value;
-        return primeRendement + (salaireBase * ratio) + (autresPrimes * ratio);
+        return primeRendement + (salaireBase * ratio) + (autresPrimes * ratio) + heuresSup;
     }
 
     const primeRendement = parseFloat(props.fiche.prime_rendement) || 0;
-    return (salaireBase + primeRendement + autresPrimes) * ratio;
+    return (salaireBase + primeRendement + autresPrimes) * ratio + heuresSup;
 });
 
 const estDeclare = computed(() => props.fiche?.est_declare_snapshot ?? true);
