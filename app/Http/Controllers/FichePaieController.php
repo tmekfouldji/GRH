@@ -390,6 +390,7 @@ class FichePaieController extends Controller
             'total_penalty' => 'nullable|numeric|min:0',
             'net_a_payer' => 'nullable|numeric|min:0',
             'jours_travailles' => 'nullable|integer|min:0',
+            'jours_ponderes' => 'nullable|numeric|min:0',
             'pieces_fabriquees' => 'nullable|integer|min:0',
             'prime_par_piece' => 'nullable|numeric|min:0',
         ]);
@@ -446,9 +447,12 @@ class FichePaieController extends Controller
             }
         }
 
-        // Update jours_travailles FIRST (affects ratio_presence for calculerSalaire)
+        // Update jours_travailles and jours_ponderes FIRST (affects ratio_presence for calculerSalaire)
         if (isset($validated['jours_travailles'])) {
             $fichePaie->jours_travailles = $validated['jours_travailles'];
+        }
+        if (isset($validated['jours_ponderes'])) {
+            $fichePaie->jours_ponderes = $validated['jours_ponderes'];
         }
         
         // Update pieces_fabriquees and prime_par_piece if provided (piece employees)

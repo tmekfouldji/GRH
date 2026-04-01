@@ -62,6 +62,7 @@
                                     <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">Entrée</th>
                                     <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">Sortie</th>
                                     <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">Heures</th>
+                                    <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">Coeff</th>
                                     <th class="px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                                         <span class="flex items-center justify-center gap-1">
                                             <input type="checkbox" @change="toggleAllLate" class="rounded" />
@@ -112,6 +113,10 @@
                                     </td>
                                     <td class="px-2 py-1 text-center text-xs">
                                         {{ day.heures_travaillees || 0 }}h
+                                    </td>
+                                    <td class="px-2 py-1 text-center text-xs font-semibold"
+                                        :class="day.coefficient > 1 ? 'text-orange-700 bg-orange-50' : 'text-gray-400'">
+                                        x{{ day.coefficient }}
                                     </td>
                                     <td class="px-2 py-1 text-center">
                                         <input type="checkbox" v-model="day.isLate" 
@@ -201,7 +206,7 @@
                                 <span class="font-bold text-green-600">Net à payer: {{ formatMoney(calculatedNetAPayer) }}</span>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">{{ includedWorkingDays }}/{{ workingDaysInMonth }} jours ({{ Math.round(calculatedRatio * 100) }}%)</p>
+                        <p class="text-xs text-gray-400 mt-1">{{ includedWorkingDays }} jours inclus ({{ weightedIncludedDays }}/{{ workingDaysInMonth }} pondérés = {{ Math.round(calculatedRatio * 100) }}%)</p>
                     </div>
                     <div class="flex gap-3">
                         <button @click="close" class="btn btn-secondary">Annuler</button>
@@ -265,24 +270,27 @@ const generateMonthDays = (year, month, pointages) => {
         const dayOfWeek = date.getDay();
         // In Algeria, weekends are Friday (5) and Saturday (6)
         const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
-        
+        // Coefficients: Friday = x2, Saturday = x1.5, others = x1
+        const coefficient = dayOfWeek === 5 ? 2 : (dayOfWeek === 6 ? 1.5 : 1);
+
         const existingPointage = pointageMap[dateStr];
         const hasPointage = !!existingPointage;
-        
+
         days.push({
             date: dateStr,
             dayOfMonth: day,
             dayOfWeek: dayOfWeek,
             isWeekend: isWeekend,
+            coefficient: coefficient,
             label: date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }),
             id: existingPointage?.id || null,
-            statut: existingPointage?.statut || (isWeekend ? 'absent' : 'absent'),
+            statut: existingPointage?.statut || 'absent',
             heure_entree: existingPointage?.heure_entree ? existingPointage.heure_entree.substring(11, 16) : '',
             heure_sortie: existingPointage?.heure_sortie ? existingPointage.heure_sortie.substring(11, 16) : '',
             heures_travaillees: existingPointage?.heures_travaillees || 0,
             isLate: existingPointage?.statut === 'retard' || false,
             penalty: 0,
-            included: !isWeekend && hasPointage,
+            included: hasPointage,
         });
     }
     
@@ -305,23 +313,23 @@ watch([() => props.show, () => props.fiche, () => props.pointages], ([showVal, f
 
 const totalDaysCount = computed(() => allDays.value.length);
 
-const presentCount = computed(() => 
-    allDays.value.filter(d => d.statut === 'present' && !d.isWeekend).length
+const presentCount = computed(() =>
+    allDays.value.filter(d => d.statut === 'present').length
 );
 
-const lateCount = computed(() => 
+const lateCount = computed(() =>
     allDays.value.filter(d => d.isLate).length
 );
 
-const excludedCount = computed(() => 
+const excludedCount = computed(() =>
     allDays.value.filter(d => !d.included && !d.isWeekend).length
 );
 
-const includedCount = computed(() => 
+const includedCount = computed(() =>
     allDays.value.filter(d => d.included).length
 );
 
-const allIncluded = computed(() => 
+const allIncluded = computed(() =>
     allDays.value.filter(d => !d.isWeekend).every(d => d.included)
 );
 
@@ -331,18 +339,25 @@ const totalPenalty = computed(() =>
         .reduce((sum, d) => sum + (parseFloat(d.penalty) || 0), 0)
 );
 
-// Calculate ratio based on included working days
-const workingDaysInMonth = computed(() => 
+// Calculate ratio based on included working days with weekend coefficients
+const workingDaysInMonth = computed(() =>
     allDays.value.filter(d => !d.isWeekend).length
 );
 
-const includedWorkingDays = computed(() => 
-    allDays.value.filter(d => !d.isWeekend && d.included && d.statut !== 'absent').length
+const includedWorkingDays = computed(() =>
+    allDays.value.filter(d => d.included && d.statut !== 'absent').length
+);
+
+// Weighted days: Friday x2, Saturday x1.5
+const weightedIncludedDays = computed(() =>
+    allDays.value
+        .filter(d => d.included && d.statut !== 'absent')
+        .reduce((sum, d) => sum + d.coefficient, 0)
 );
 
 const calculatedRatio = computed(() => {
     const total = workingDaysInMonth.value || 22;
-    return includedWorkingDays.value / total;
+    return weightedIncludedDays.value / total;
 });
 
 // Calculate prorated salary with CNAS/IRG (matching backend logic)
@@ -435,9 +450,7 @@ const toggleAllLate = (e) => {
 const toggleAllIncluded = (e) => {
     const checked = e.target.checked;
     allDays.value.forEach(d => {
-        if (!d.isWeekend) {
-            d.included = checked;
-        }
+        d.included = checked;
     });
 };
 
@@ -463,6 +476,7 @@ const save = () => {
         total_penalty: totalPenalty.value,
         net_a_payer: calculatedNetAPayer.value,
         jours_travailles: includedWorkingDays.value,
+        jours_ponderes: weightedIncludedDays.value,
     };
 
     // Include pieces data for piece employees
