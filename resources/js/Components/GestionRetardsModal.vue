@@ -206,7 +206,7 @@
                                 <span class="font-bold text-green-600">Net à payer: {{ formatMoney(calculatedNetAPayer) }}</span>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-400 mt-1">{{ includedWorkingDays }} jours inclus ({{ weightedIncludedDays }}/{{ workingDaysInMonth }} pondérés = {{ Math.round(calculatedRatio * 100) }}%)</p>
+                        <p class="text-xs text-gray-400 mt-1">{{ includedWorkingDays }} jours inclus ({{ Math.round(weightedIncludedDays * 100) / 100 }}/{{ workingDaysInMonth }} pondérés = {{ Math.round(calculatedRatio * 100) }}%)</p>
                     </div>
                     <div class="flex gap-3">
                         <button @click="close" class="btn btn-secondary">Annuler</button>
@@ -349,10 +349,22 @@ const includedWorkingDays = computed(() =>
 );
 
 // Weighted days: Friday x2, Saturday x1.5
+// If entry/exit times are provided, prorate the coefficient based on hours worked vs 8h standard day
+const STANDARD_HOURS = 8;
 const weightedIncludedDays = computed(() =>
     allDays.value
         .filter(d => d.included && d.statut !== 'absent')
-        .reduce((sum, d) => sum + d.coefficient, 0)
+        .reduce((sum, d) => {
+            const hours = parseFloat(d.heures_travaillees) || 0;
+            const hasTimes = d.heure_entree && d.heure_sortie;
+            if (hasTimes && hours > 0) {
+                // Prorate: if worked 4h out of 8h, count as 0.5 of the day's coefficient
+                const ratio = Math.min(hours / STANDARD_HOURS, 1);
+                return sum + (d.coefficient * ratio);
+            }
+            // No times entered: count the full day coefficient
+            return sum + d.coefficient;
+        }, 0)
 );
 
 const calculatedRatio = computed(() => {
@@ -476,7 +488,7 @@ const save = () => {
         total_penalty: totalPenalty.value,
         net_a_payer: calculatedNetAPayer.value,
         jours_travailles: includedWorkingDays.value,
-        jours_ponderes: weightedIncludedDays.value,
+        jours_ponderes: Math.round(weightedIncludedDays.value * 100) / 100,
     };
 
     // Include pieces data for piece employees
