@@ -86,6 +86,12 @@
                         </button>
                     </div>
                     
+                    <!-- Badge déclaré/non déclaré -->
+                    <div class="mb-3">
+                        <span v-if="employe.est_declare" class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">Déclaré (CNAS + IRG)</span>
+                        <span v-else class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">Non déclaré (pas de taxes)</span>
+                    </div>
+
                     <div class="space-y-3">
                         <!-- Gains -->
                         <div class="bg-white rounded-lg p-3">
@@ -95,23 +101,15 @@
                                     <span class="text-gray-600">Salaire de base</span>
                                     <span class="font-medium">{{ formatMoney(employe.salaire_base) }}</span>
                                 </div>
-                                <div v-if="employe.prime_transport_defaut > 0" class="flex justify-between text-green-600">
-                                    <span>Prime transport</span>
-                                    <span class="font-medium">+{{ formatMoney(employe.prime_transport_defaut) }}</span>
-                                </div>
-                                <div v-if="employe.prime_panier_defaut > 0" class="flex justify-between text-green-600">
-                                    <span>Prime panier</span>
-                                    <span class="font-medium">+{{ formatMoney(employe.prime_panier_defaut) }}</span>
-                                </div>
                                 <div class="flex justify-between pt-2 border-t font-semibold">
                                     <span>Salaire Brut</span>
                                     <span class="text-blue-600">{{ formatMoney(getSalairePreview('salaire_brut')) }}</span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Déductions -->
-                        <div class="bg-white rounded-lg p-3">
+
+                        <!-- Déductions (seulement si déclaré) -->
+                        <div v-if="employe.est_declare" class="bg-white rounded-lg p-3">
                             <p class="text-xs text-gray-500 uppercase mb-2">Retenues</p>
                             <div class="space-y-1 text-sm">
                                 <div class="flex justify-between text-red-600">
@@ -124,7 +122,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Net -->
                         <div class="bg-green-600 text-white rounded-lg p-4 flex justify-between items-center">
                             <span class="font-semibold">SALAIRE NET</span>
@@ -298,8 +296,6 @@ const genererFiche = () => {
         mois: genererForm.mois,
         annee: genererForm.annee,
         prime_rendement: genererForm.prime_rendement,
-        prime_transport: props.employe.prime_transport_defaut || 0,
-        autres_primes: props.employe.prime_panier_defaut || 0,
     }, {
         onSuccess: () => {
             showGenererModal.value = false;

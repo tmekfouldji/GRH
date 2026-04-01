@@ -73,8 +73,6 @@ class EmployeController extends Controller
             'departement' => 'nullable|max:100',
             'date_embauche' => 'required|date',
             'salaire_base' => 'required|numeric|min:0',
-            'prime_transport_defaut' => 'nullable|numeric|min:0',
-            'prime_panier_defaut' => 'nullable|numeric|min:0',
             'statut' => 'required|in:actif,inactif,conge',
             'adresse' => 'nullable|string',
             'cin' => 'nullable|max:20',
@@ -83,6 +81,7 @@ class EmployeController extends Controller
             'rib' => 'nullable|max:30',
             'mode_remuneration' => 'required|in:salaire,piece',
             'prime_par_piece' => 'nullable|required_if:mode_remuneration,piece|numeric|min:0.01',
+            'est_declare' => 'boolean',
         ]);
 
         // Clear prime_par_piece if mode is salaire
@@ -128,8 +127,6 @@ class EmployeController extends Controller
             'departement' => 'nullable|max:100',
             'date_embauche' => 'required|date',
             'salaire_base' => 'required|numeric|min:0',
-            'prime_transport_defaut' => 'nullable|numeric|min:0',
-            'prime_panier_defaut' => 'nullable|numeric|min:0',
             'statut' => 'required|in:actif,inactif,conge',
             'adresse' => 'nullable|string',
             'cin' => 'nullable|max:20',
@@ -138,6 +135,7 @@ class EmployeController extends Controller
             'rib' => 'nullable|max:30',
             'mode_remuneration' => 'required|in:salaire,piece',
             'prime_par_piece' => 'nullable|required_if:mode_remuneration,piece|numeric|min:0.01',
+            'est_declare' => 'boolean',
         ]);
 
         // Clear prime_par_piece if mode is salaire

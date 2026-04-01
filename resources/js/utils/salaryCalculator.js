@@ -81,14 +81,12 @@ function applyAbatement40(irgBrut) {
  */
 export function calculateFromBrut(salaireBrut, options = {}) {
     const {
-        primeTransport = 0,
-        primePanier = 0,
         autresPrimes = 0,
         autresDeductions = 0,
     } = options;
-    
+
     // Total gross = base + primes
-    const totalBrut = salaireBrut + primeTransport + primePanier + autresPrimes;
+    const totalBrut = salaireBrut + autresPrimes;
     
     // CNAS 9%
     const cotisationCNAS = Math.round(totalBrut * 0.09);
@@ -107,8 +105,6 @@ export function calculateFromBrut(salaireBrut, options = {}) {
     
     return {
         salaireBrut: Math.round(salaireBrut),
-        primeTransport: Math.round(primeTransport),
-        primePanier: Math.round(primePanier),
         autresPrimes: Math.round(autresPrimes),
         totalBrut: Math.round(totalBrut),
         cotisationCNAS: Math.round(cotisationCNAS),
@@ -126,13 +122,11 @@ export function calculateFromBrut(salaireBrut, options = {}) {
  */
 export function calculateFromNet(salaireNetCible, options = {}) {
     const {
-        primeTransport = 0,
-        primePanier = 0,
         autresPrimes = 0,
         autresDeductions = 0,
     } = options;
-    
-    const totalPrimes = primeTransport + primePanier + autresPrimes;
+
+    const totalPrimes = autresPrimes;
     
     // Binary search to find BASE salary that gives target net
     // Low bound must account for primes (base salary can be lower than target net)
@@ -146,8 +140,6 @@ export function calculateFromNet(salaireNetCible, options = {}) {
         const mid = Math.round((low + high) / 2);
         
         const result = calculateFromBrut(mid, {
-            primeTransport,
-            primePanier,
             autresPrimes,
             autresDeductions,
         });

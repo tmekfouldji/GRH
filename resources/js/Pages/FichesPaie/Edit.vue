@@ -1,6 +1,6 @@
 <template>
     <Head title="Modifier la fiche de paie" />
-    
+
     <div class="max-w-2xl mx-auto">
         <div class="card">
             <div class="flex items-center justify-between mb-6">
@@ -10,13 +10,19 @@
                 </div>
                 <Link href="/fiches-paie" class="text-gray-500 hover:text-gray-700"><X class="w-5 h-5" /></Link>
             </div>
-            
+
+            <!-- Badge déclaré -->
+            <div class="mb-4">
+                <span v-if="fichePaie.est_declare_snapshot" class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Déclaré (CNAS + IRG)</span>
+                <span v-else class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">Non déclaré (pas de taxes)</span>
+            </div>
+
             <form @submit.prevent="submit" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Salaire de base *</label>
                     <input v-model="form.salaire_base" type="number" step="0.01" class="input" />
                 </div>
-                
+
                 <div class="border-t pt-4">
                     <h3 class="text-sm font-medium text-gray-700 mb-3">Primes</h3>
                     <div class="grid grid-cols-2 gap-4">
@@ -33,20 +39,12 @@
                             <input v-model="form.prime_rendement" type="number" step="0.01" class="input" />
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">Prime de transport</label>
-                            <input v-model="form.prime_transport" type="number" step="0.01" class="input" />
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-600 mb-1">Prime panier</label>
-                            <input v-model="form.prime_panier" type="number" step="0.01" class="input" />
-                        </div>
-                        <div>
                             <label class="block text-sm text-gray-600 mb-1">Autres primes</label>
                             <input v-model="form.autres_primes" type="number" step="0.01" class="input" />
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="border-t pt-4">
                     <h3 class="text-sm font-medium text-gray-700 mb-3">Déductions</h3>
                     <div>
@@ -54,7 +52,7 @@
                         <input v-model="form.autres_deductions" type="number" step="0.01" class="input" />
                     </div>
                 </div>
-                
+
                 <div class="border-t pt-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Statut *</label>
                     <select v-model="form.statut" class="input">
@@ -63,7 +61,7 @@
                         <option value="paye">Payé</option>
                     </select>
                 </div>
-                
+
                 <div class="flex justify-end gap-3 pt-4 border-t">
                     <Link href="/fiches-paie" class="btn btn-secondary">Annuler</Link>
                     <button type="submit" :disabled="form.processing" class="btn btn-primary">
@@ -88,8 +86,6 @@ const form = useForm({
     salaire_base: props.fichePaie.salaire_base,
     prime_rendement: props.fichePaie.prime_rendement || 0,
     pieces_fabriquees: props.fichePaie.pieces_fabriquees || 0,
-    prime_transport: props.fichePaie.prime_transport || 0,
-    prime_panier: props.fichePaie.prime_panier || 0,
     autres_primes: props.fichePaie.autres_primes || 0,
     autres_deductions: props.fichePaie.autres_deductions || 0,
     statut: props.fichePaie.statut,

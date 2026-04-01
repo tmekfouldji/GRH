@@ -26,8 +26,6 @@ class Employe extends Model
         'date_embauche',
         'date_naissance',
         'salaire_base',
-        'prime_transport_defaut',
-        'prime_panier_defaut',
         'type_contrat',
         'statut',
         'adresse',
@@ -38,15 +36,15 @@ class Employe extends Model
         'rib',
         'mode_remuneration',
         'prime_par_piece',
+        'est_declare',
     ];
 
     protected $casts = [
         'date_embauche' => 'date',
         'date_naissance' => 'date',
         'salaire_base' => 'decimal:2',
-        'prime_transport_defaut' => 'decimal:2',
-        'prime_panier_defaut' => 'decimal:2',
         'prime_par_piece' => 'decimal:2',
+        'est_declare' => 'boolean',
     ];
 
     protected $appends = ['nom_complet', 'anciennete', 'salaire_preview'];
@@ -126,15 +124,22 @@ class Employe extends Model
     public function calculerSalairePreview($primes_supplementaires = 0)
     {
         $salaire_base = $this->salaire_base ?? 0;
-        $prime_transport = $this->prime_transport_defaut ?? 0;
-        $prime_panier = $this->prime_panier_defaut ?? 0;
+        $salaire_brut = $salaire_base + $primes_supplementaires;
 
-        if ($this->mode_remuneration === 'piece') {
-            // Pour les employés "à la pièce", le preview montre le salaire de base + primes fixes
-            // La prime de rendement (pièces) n'est pas incluse car elle dépend de la production mensuelle
-            $salaire_brut = $salaire_base + $prime_transport + $prime_panier + $primes_supplementaires;
-        } else {
-            $salaire_brut = $salaire_base + $prime_transport + $prime_panier + $primes_supplementaires;
+        // Pour les employés non déclarés, pas de cotisations ni d'IRG
+        if (!$this->est_declare) {
+            return [
+                'salaire_base' => round($salaire_base, 2),
+                'salaire_brut' => round($salaire_brut, 2),
+                'cotisation_cnas' => 0,
+                'sni' => round($salaire_brut, 2),
+                'irg' => 0,
+                'total_deductions' => 0,
+                'salaire_net' => round($salaire_brut, 2),
+                'mode_remuneration' => $this->mode_remuneration ?? 'salaire',
+                'prime_par_piece' => $this->prime_par_piece,
+                'est_declare' => false,
+            ];
         }
 
         // CNAS 9%
@@ -151,8 +156,6 @@ class Employe extends Model
 
         return [
             'salaire_base' => round($salaire_base, 2),
-            'prime_transport' => round($prime_transport, 2),
-            'prime_panier' => round($prime_panier, 2),
             'salaire_brut' => round($salaire_brut, 2),
             'cotisation_cnas' => round($cotisation_cnas, 2),
             'sni' => round($sni, 2),
@@ -161,6 +164,7 @@ class Employe extends Model
             'salaire_net' => round($salaire_net, 2),
             'mode_remuneration' => $this->mode_remuneration ?? 'salaire',
             'prime_par_piece' => $this->prime_par_piece,
+            'est_declare' => true,
         ];
     }
 
@@ -198,11 +202,11 @@ class Employe extends Model
             'heures_supplementaires' => $heures_sup,
             'prime_anciennete' => 0,
             'prime_rendement' => $options['prime_rendement'] ?? 0,
-            'prime_transport' => $this->prime_transport_defaut ?? 0,
-            'autres_primes' => ($this->prime_panier_defaut ?? 0) + ($options['autres_primes'] ?? 0),
+            'autres_primes' => $options['autres_primes'] ?? 0,
             'autres_deductions' => $options['autres_deductions'] ?? 0,
             'mode_remuneration_snapshot' => $this->mode_remuneration ?? 'salaire',
             'prime_par_piece_snapshot' => $this->prime_par_piece,
+            'est_declare_snapshot' => $this->est_declare ?? true,
             'pieces_fabriquees' => 0,
         ]);
 

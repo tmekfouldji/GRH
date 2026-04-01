@@ -55,7 +55,7 @@
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Rémun.</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Salaire Base</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Primes</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Déclaré</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Salaire Net</th>
                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -89,12 +89,9 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">{{ formatNumber(employe.salaire_base) }}</td>
-                        <td class="px-4 py-3 whitespace-nowrap text-sm text-right">
-                            <div class="text-xs text-gray-500">
-                                <span v-if="employe.prime_transport_defaut" class="block">Transport: {{ formatNumber(employe.prime_transport_defaut) }}</span>
-                                <span v-if="employe.prime_panier_defaut" class="block">Panier: {{ formatNumber(employe.prime_panier_defaut) }}</span>
-                                <span v-if="!employe.prime_transport_defaut && !employe.prime_panier_defaut">-</span>
-                            </div>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+                            <span v-if="employe.est_declare" class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">Déclaré</span>
+                            <span v-else class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-700">Non déclaré</span>
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-sm text-right font-bold text-green-600">{{ formatNumber(getSalaireNet(employe)) }}</td>
                         <td class="px-4 py-3 whitespace-nowrap text-right text-sm space-x-2">
@@ -216,13 +213,8 @@ const formatNumber = (value) => {
 
 const getSalaireNet = (employe) => {
     const base = parseFloat(employe.salaire_base) || 0;
-    const transport = parseFloat(employe.prime_transport_defaut) || 0;
-    const panier = parseFloat(employe.prime_panier_defaut) || 0;
-    
-    const result = calculateFromBrut(base, {
-        primeTransport: transport,
-        primePanier: panier,
-    });
+    if (!employe.est_declare) return base;
+    const result = calculateFromBrut(base);
     return result.salaireNet;
 };
 
