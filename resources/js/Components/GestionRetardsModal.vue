@@ -349,30 +349,27 @@ const calculatedRatio = computed(() => {
 const calculatedBrutProrata = computed(() => {
     if (!props.fiche) return 0;
     const salaireBase = parseFloat(props.fiche.salaire_base) || 0;
-    const primeTransport = parseFloat(props.fiche.prime_transport) || 0;
     const autresPrimes = parseFloat(props.fiche.autres_primes) || 0;
     const ratio = calculatedRatio.value;
 
     if (isPieceEmployee.value) {
-        // Piece employees: prime_rendement (from pieces) is NOT prorated
-        // salaire_base and other primes ARE prorated
         const primeRendement = calculatedPrimeRendement.value;
-        return primeRendement + (salaireBase * ratio) + ((primeTransport + autresPrimes) * ratio);
+        return primeRendement + (salaireBase * ratio) + (autresPrimes * ratio);
     }
 
-    // Salary employees: everything prorated
     const primeRendement = parseFloat(props.fiche.prime_rendement) || 0;
-    return (salaireBase + primeRendement + primeTransport + autresPrimes) * ratio;
+    return (salaireBase + primeRendement + autresPrimes) * ratio;
 });
 
-const calculatedCNAS = computed(() => calculatedBrutProrata.value * 0.09);
+const estDeclare = computed(() => props.fiche?.est_declare_snapshot ?? true);
+
+const calculatedCNAS = computed(() => estDeclare.value ? calculatedBrutProrata.value * 0.09 : 0);
 
 const calculatedNetProrata = computed(() => {
-    // Simplified: brut proraté - CNAS (9%) - IRG estimate (~10% for simplicity)
     const brutProrata = calculatedBrutProrata.value;
+    if (!estDeclare.value) return brutProrata;
     const cnas = calculatedCNAS.value;
     const imposable = brutProrata - cnas;
-    // Simplified IRG estimate (actual calculation is complex)
     const irg = imposable > 30000 ? (imposable - 20000) * 0.23 * 0.6 : 0;
     return brutProrata - cnas - irg;
 });

@@ -37,30 +37,6 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Prime de transport (DZD)</label>
-                            <input 
-                                v-model.number="primeTransport" 
-                                type="number" 
-                                min="0"
-                                step="500"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                placeholder="3000"
-                            />
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Prime de panier (DZD)</label>
-                            <input 
-                                v-model.number="primePanier" 
-                                type="number" 
-                                min="0"
-                                step="500"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                                placeholder="2000"
-                            />
-                        </div>
-
-                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Autres primes (DZD)</label>
                             <input
                                 v-model.number="autresPrimes"
@@ -174,14 +150,6 @@
                                     <span class="text-gray-600">Salaire de base</span>
                                     <span class="font-medium">{{ formatNumber(salaireBase) }} DZD</span>
                                 </div>
-                                <div v-if="primeTransport > 0" class="flex justify-between text-green-600">
-                                    <span>+ Prime de transport</span>
-                                    <span>{{ formatNumber(primeTransport) }} DZD</span>
-                                </div>
-                                <div v-if="primePanier > 0" class="flex justify-between text-green-600">
-                                    <span>+ Prime de panier</span>
-                                    <span>{{ formatNumber(primePanier) }} DZD</span>
-                                </div>
                                 <div v-if="autresPrimes > 0" class="flex justify-between text-green-600">
                                     <span>+ Autres primes</span>
                                     <span>{{ formatNumber(autresPrimes) }} DZD</span>
@@ -293,8 +261,6 @@ import { calculateFromBrut } from '@/utils/salaryCalculator';
 
 // Input values
 const salaireBase = ref(50000);
-const primeTransport = ref(3000);
-const primePanier = ref(2000);
 const autresPrimes = ref(0);
 const modeRemuneration = ref('salaire');
 const primePiece = ref(50);
@@ -309,8 +275,6 @@ const primeRendementPiece = computed(() => {
 const salaryResult = computed(() => {
     const extras = modeRemuneration.value === 'piece' ? primeRendementPiece.value : 0;
     return calculateFromBrut(salaireBase.value, {
-        primeTransport: primeTransport.value,
-        primePanier: primePanier.value,
         autresPrimes: autresPrimes.value + extras,
     });
 });
@@ -366,26 +330,18 @@ const setPreset = (preset) => {
     switch (preset) {
         case 'smic':
             salaireBase.value = 20000;
-            primeTransport.value = 2000;
-            primePanier.value = 0;
             autresPrimes.value = 0;
             break;
         case 'moyen':
             salaireBase.value = 45000;
-            primeTransport.value = 3000;
-            primePanier.value = 2000;
             autresPrimes.value = 0;
             break;
         case 'cadre':
             salaireBase.value = 80000;
-            primeTransport.value = 5000;
-            primePanier.value = 3000;
             autresPrimes.value = 5000;
             break;
         case 'directeur':
             salaireBase.value = 150000;
-            primeTransport.value = 10000;
-            primePanier.value = 5000;
             autresPrimes.value = 20000;
             break;
     }

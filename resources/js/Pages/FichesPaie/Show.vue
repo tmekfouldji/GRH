@@ -86,10 +86,6 @@
                                 Montant saisi manuellement
                             </div>
                         </div>
-                        <div v-if="fichePaie.prime_transport > 0" class="flex justify-between">
-                            <span class="text-gray-600">Prime de transport</span>
-                            <span class="font-medium">{{ formatMoney(fichePaie.prime_transport) }}</span>
-                        </div>
                         <div v-if="fichePaie.autres_primes > 0" class="flex justify-between">
                             <span class="text-gray-600">Autres primes</span>
                             <span class="font-medium">{{ formatMoney(fichePaie.autres_primes) }}</span>

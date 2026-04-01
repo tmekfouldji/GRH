@@ -151,6 +151,7 @@ class PaieMensuelle extends Model
                 // Snapshot mode_remuneration and prime_par_piece from employee
                 $ficheExistante->mode_remuneration_snapshot = $employe->mode_remuneration ?? 'salaire';
                 $ficheExistante->prime_par_piece_snapshot = $employe->prime_par_piece;
+                $ficheExistante->est_declare_snapshot = $employe->est_declare ?? true;
                 // Recalculate presences and salary for this specific month
                 $ficheExistante->calculerPresences();
                 $ficheExistante->calculerSalaire();
@@ -196,7 +197,7 @@ class PaieMensuelle extends Model
         $this->nombre_employes = $fiches->count();
         $this->total_salaires_base = $fiches->sum('salaire_base');
         $this->total_primes = $fiches->sum(function($f) {
-            return $f->prime_anciennete + $f->prime_rendement + $f->prime_transport + $f->autres_primes;
+            return $f->prime_anciennete + $f->prime_rendement + $f->autres_primes;
         });
         $this->total_brut = $fiches->sum('salaire_brut');
         $this->total_cotisations_cnas = $fiches->sum('cotisation_cnss');
@@ -204,8 +205,9 @@ class PaieMensuelle extends Model
         $this->total_deductions = $fiches->sum('total_deductions');
         $this->total_net = $fiches->sum('salaire_net');
         
-        // Charges patronales (25% du brut)
-        $this->total_charges_patronales = $this->total_brut * 0.25;
+        // Charges patronales (25% du brut) uniquement pour les employés déclarés
+        $brutDeclare = $fiches->where('est_declare_snapshot', true)->sum('salaire_brut');
+        $this->total_charges_patronales = $brutDeclare * 0.25;
         $this->cout_total_employeur = $this->total_brut + $this->total_charges_patronales;
 
         $this->save();

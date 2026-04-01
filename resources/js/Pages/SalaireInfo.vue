@@ -205,22 +205,6 @@
                             <p class="text-xs text-gray-500 mt-1">Exemple: 10 ans = 10% du salaire de base</p>
                         </div>
                         
-                        <div class="border-l-4 border-green-500 pl-4">
-                            <h4 class="font-medium text-gray-800">Prime de Transport</h4>
-                            <p class="text-sm text-gray-600">
-                                Indemnité forfaitaire pour les frais de déplacement. 
-                                <strong>Imposable</strong> si elle dépasse les frais réels.
-                            </p>
-                        </div>
-                        
-                        <div class="border-l-4 border-orange-500 pl-4">
-                            <h4 class="font-medium text-gray-800">Prime de Panier</h4>
-                            <p class="text-sm text-gray-600">
-                                Indemnité de restauration. Peut être exonérée si ≤ 300 DZD/jour 
-                                et l'entreprise ne dispose pas de cantine.
-                            </p>
-                        </div>
-                        
                         <div class="border-l-4 border-purple-500 pl-4">
                             <h4 class="font-medium text-gray-800">Prime de Rendement</h4>
                             <p class="text-sm text-gray-600">

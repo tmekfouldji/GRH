@@ -25,7 +25,6 @@ class FichePaie extends Model
         'jours_justifies',
         'prime_anciennete',
         'prime_rendement',
-        'prime_transport',
         'autres_primes',
         'salaire_brut',
         'cotisation_cnss',
@@ -53,6 +52,7 @@ class FichePaie extends Model
         'pieces_fabriquees',
         'prime_par_piece_snapshot',
         'mode_remuneration_snapshot',
+        'est_declare_snapshot',
     ];
 
     protected $casts = [
@@ -64,7 +64,6 @@ class FichePaie extends Model
         'prime_par_piece_snapshot' => 'decimal:2',
         'prime_anciennete' => 'decimal:2',
         'prime_rendement' => 'decimal:2',
-        'prime_transport' => 'decimal:2',
         'autres_primes' => 'decimal:2',
         'salaire_brut' => 'decimal:2',
         'cotisation_cnss' => 'decimal:2',
@@ -81,6 +80,7 @@ class FichePaie extends Model
         'date_remise' => 'datetime',
         'date_validation' => 'datetime',
         'ajustement_heures' => 'decimal:2',
+        'est_declare_snapshot' => 'boolean',
     ];
 
     protected $appends = ['statut_validation_label', 'ratio_presence'];
@@ -318,7 +318,7 @@ class FichePaie extends Model
         $mode = $this->mode_remuneration_snapshot ?? 'salaire';
 
         // Total des primes (hors prime_rendement pour les employés "piece" car elle est calculée)
-        $total_primes_fixes = $this->prime_anciennete + $this->prime_transport + $this->autres_primes;
+        $total_primes_fixes = $this->prime_anciennete + $this->autres_primes;
 
         if ($mode === 'piece') {
             // Employé "à la pièce": prime_rendement = prime_par_piece × pieces_fabriquees
@@ -342,17 +342,24 @@ class FichePaie extends Model
             $this->salaire_brut = round(($brut_complet * $ratio) + $this->montant_heures_supplementaires, 2);
         }
 
-        // Cotisation CNAS salariale: 9% du salaire brut
-        $this->cotisation_cnss = round($this->salaire_brut * 0.09, 2);
+        // Pour les employés non déclarés, pas de cotisations ni d'IRG
+        if (!($this->est_declare_snapshot ?? true)) {
+            $this->cotisation_cnss = 0;
+            $this->cotisation_amo = 0;
+            $this->ir = 0;
+        } else {
+            // Cotisation CNAS salariale: 9% du salaire brut
+            $this->cotisation_cnss = round($this->salaire_brut * 0.09, 2);
 
-        // Pas de cotisation AMO séparée en Algérie (incluse dans CNAS)
-        $this->cotisation_amo = 0;
+            // Pas de cotisation AMO séparée en Algérie (incluse dans CNAS)
+            $this->cotisation_amo = 0;
 
-        // Salaire Net Imposable (SNI) = Brut - Cotisations sociales
-        $salaire_imposable = $this->salaire_brut - $this->cotisation_cnss;
+            // Salaire Net Imposable (SNI) = Brut - Cotisations sociales
+            $salaire_imposable = $this->salaire_brut - $this->cotisation_cnss;
 
-        // IRG (Impôt sur le Revenu Global) selon barème algérien
-        $this->ir = $this->calculerIRG($salaire_imposable);
+            // IRG (Impôt sur le Revenu Global) selon barème algérien
+            $this->ir = $this->calculerIRG($salaire_imposable);
+        }
 
         // Total déductions
         $this->total_deductions = round($this->cotisation_cnss + $this->cotisation_amo +

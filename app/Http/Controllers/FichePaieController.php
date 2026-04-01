@@ -60,8 +60,6 @@ class FichePaieController extends Controller
             'employe_id' => 'required|exists:employes,id',
             'mois' => 'required|integer|min:1|max:12',
             'annee' => 'required|integer|min:2020|max:2100',
-            'prime_transport' => 'nullable|numeric|min:0',
-            'prime_panier' => 'nullable|numeric|min:0',
             'prime_rendement' => 'nullable|numeric|min:0',
             'autres_primes' => 'nullable|numeric|min:0',
             'autres_deductions' => 'nullable|numeric|min:0',
@@ -87,9 +85,9 @@ class FichePaieController extends Controller
             'heures_supplementaires' => $heures_sup,
             'prime_anciennete' => 0,
             'prime_rendement' => $validated['prime_rendement'] ?? 0,
-            'prime_transport' => $validated['prime_transport'] ?? 0,
-            'autres_primes' => ($validated['prime_panier'] ?? 0) + ($validated['autres_primes'] ?? 0),
+            'autres_primes' => $validated['autres_primes'] ?? 0,
             'autres_deductions' => $validated['autres_deductions'] ?? 0,
+            'est_declare_snapshot' => $employe->est_declare ?? true,
         ]);
 
         $fichePaie->calculerSalaire();
@@ -124,7 +122,6 @@ class FichePaieController extends Controller
     {
         $rules = [
             'salaire_base' => 'required|numeric|min:0',
-            'prime_transport' => 'nullable|numeric|min:0',
             'autres_primes' => 'nullable|numeric|min:0',
             'autres_deductions' => 'nullable|numeric|min:0',
             'statut' => 'required|in:brouillon,valide,paye',
@@ -197,6 +194,7 @@ class FichePaieController extends Controller
                     'salaire_base' => $employe->salaire_base,
                     'heures_normales' => $pointages->sum('heures_travaillees'),
                     'heures_supplementaires' => $pointages->sum('heures_supplementaires'),
+                    'est_declare_snapshot' => $employe->est_declare ?? true,
                 ]);
 
                 $fichePaie->calculerSalaire();
@@ -249,8 +247,7 @@ class FichePaieController extends Controller
         // Données
         $row = 2;
         foreach ($fichesPaie as $fiche) {
-            $totalPrimes = $fiche->prime_anciennete + $fiche->prime_rendement +
-                          $fiche->prime_transport + $fiche->autres_primes;
+            $totalPrimes = $fiche->prime_anciennete + $fiche->prime_rendement + $fiche->autres_primes;
 
             $sheet->fromArray([
                 $fiche->employe->matricule,
@@ -327,7 +324,7 @@ class FichePaieController extends Controller
                 $fichePaie->salaire_base = $employe->salaire_base;
                 $fichePaie->prime_anciennete = floatval($row[3] ?? 0);
                 $fichePaie->prime_rendement = floatval($row[4] ?? 0);
-                $fichePaie->prime_transport = floatval($row[5] ?? 0);
+                // prime_transport removed - skip column 5
                 $fichePaie->autres_primes = floatval($row[6] ?? 0);
                 $fichePaie->autres_deductions = floatval($row[7] ?? 0);
 
@@ -502,10 +499,10 @@ class FichePaieController extends Controller
         $fichePaie->salaire_base = $employe->salaire_base ?? 0;
         $fichePaie->prime_anciennete = $employe->prime_anciennete ?? 0;
         $fichePaie->prime_rendement = $employe->prime_rendement ?? 0;
-        $fichePaie->prime_transport = $employe->prime_transport ?? 0;
         $fichePaie->autres_primes = $employe->autres_primes ?? 0;
         $fichePaie->mode_remuneration_snapshot = $employe->mode_remuneration ?? 'salaire';
         $fichePaie->prime_par_piece_snapshot = $employe->prime_par_piece;
+        $fichePaie->est_declare_snapshot = $employe->est_declare ?? true;
         
         // Recalculate salary with new data
         $fichePaie->calculerSalaire();

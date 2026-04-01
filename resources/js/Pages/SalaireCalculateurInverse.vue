@@ -41,27 +41,6 @@
                         <div class="border-t pt-4">
                             <h3 class="text-sm font-medium text-gray-700 mb-3">Options supplémentaires</h3>
                             
-                            <div class="space-y-3">
-                                <div class="flex items-center gap-2">
-                                    <input 
-                                        v-model="inclurePrimeTransport" 
-                                        type="checkbox" 
-                                        id="primeTransport"
-                                        class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                    />
-                                    <label for="primeTransport" class="text-sm text-gray-700">Inclure prime transport (3,000 DZD)</label>
-                                </div>
-
-                                <div class="flex items-center gap-2">
-                                    <input 
-                                        v-model="inclurePrimePanier" 
-                                        type="checkbox" 
-                                        id="primePanier"
-                                        class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                    />
-                                    <label for="primePanier" class="text-sm text-gray-700">Inclure prime panier (2,000 DZD)</label>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -163,14 +142,6 @@
                                 <div v-if="primeAnciennete > 0" class="flex justify-between text-green-600">
                                     <span>+ Prime d'ancienneté ({{ Math.min(anciennete, 25) }}%)</span>
                                     <span>{{ formatNumber(primeAnciennete) }} DZD</span>
-                                </div>
-                                <div v-if="inclurePrimeTransport" class="flex justify-between text-green-600">
-                                    <span>+ Prime de transport</span>
-                                    <span>3,000 DZD</span>
-                                </div>
-                                <div v-if="inclurePrimePanier" class="flex justify-between text-green-600">
-                                    <span>+ Prime de panier</span>
-                                    <span>2,000 DZD</span>
                                 </div>
                                 <div class="flex justify-between font-bold pt-2 border-t">
                                     <span>= Salaire Brut</span>
@@ -306,23 +277,13 @@ import { calculateFromNet, calculateEmployerCost } from '@/utils/salaryCalculato
 
 // Input values
 const salaireNetSouhaite = ref(40000);
-const inclurePrimeTransport = ref(false);
-const inclurePrimePanier = ref(false);
 
 // Calculate primes
-const primesTotal = computed(() => {
-    let primes = 0;
-    if (inclurePrimeTransport.value) primes += 3000;
-    if (inclurePrimePanier.value) primes += 2000;
-    return primes;
-});
+const primesTotal = computed(() => 0);
 
 // Use unified salary calculator
 const salaryResult = computed(() => {
-    return calculateFromNet(salaireNetSouhaite.value, {
-        primeTransport: inclurePrimeTransport.value ? 3000 : 0,
-        primePanier: inclurePrimePanier.value ? 2000 : 0,
-    });
+    return calculateFromNet(salaireNetSouhaite.value);
 });
 
 const salaireBrutRequis = computed(() => salaryResult.value.totalBrut);

@@ -254,12 +254,6 @@
                     <td class="amount">{{ number_format($fichesPaie->prime_rendement, 2, ',', ' ') }}</td>
                 </tr>
                 @endif
-                @if($fichesPaie->prime_transport > 0)
-                <tr>
-                    <td>Prime de transport</td>
-                    <td class="amount">{{ number_format($fichesPaie->prime_transport, 2, ',', ' ') }}</td>
-                </tr>
-                @endif
                 @if($fichesPaie->autres_primes > 0)
                 <tr>
                     <td>Autres primes</td>
@@ -274,6 +268,7 @@
                 <tr class="section-header">
                     <td colspan="2">RETENUES</td>
                 </tr>
+                @if($fichesPaie->est_declare_snapshot ?? true)
                 <tr>
                     <td>Cotisation CNAS (9%)</td>
                     <td class="amount deduction">- {{ number_format($fichesPaie->cotisation_cnss, 2, ',', ' ') }}</td>
@@ -282,6 +277,7 @@
                     <td>IRG (Impôt sur le Revenu Global)</td>
                     <td class="amount deduction">- {{ number_format($fichesPaie->ir, 2, ',', ' ') }}</td>
                 </tr>
+                @endif
                 @if($fichesPaie->autres_deductions > 0)
                 <tr>
                     <td>Autres déductions</td>

@@ -54,12 +54,6 @@
             <td class="amount gain">+ {{ number_format($fiche->montant_heures_supplementaires, 2, ',', ' ') }}</td>
         </tr>
         @endif
-        @if($fiche->prime_transport > 0)
-        <tr>
-            <td>Prime transport</td>
-            <td class="amount gain">+ {{ number_format($fiche->prime_transport, 2, ',', ' ') }}</td>
-        </tr>
-        @endif
         @if($fiche->prime_rendement > 0)
         <tr>
             <td>Prime rendement @if(($fiche->mode_remuneration_snapshot ?? 'salaire') === 'piece')({{ $fiche->pieces_fabriquees ?? 0 }} pcs)@endif</td>
@@ -78,6 +72,7 @@
         </tr>
 
         <tr class="section-header"><td colspan="2" style="background:#fef2f2;color:#dc2626;">RETENUES</td></tr>
+        @if($fiche->est_declare_snapshot ?? true)
         <tr>
             <td>CNAS (9%)</td>
             <td class="amount deduction">- {{ number_format($fiche->cotisation_cnss, 2, ',', ' ') }}</td>
@@ -86,6 +81,7 @@
             <td>IRG</td>
             <td class="amount deduction">- {{ number_format($fiche->ir, 2, ',', ' ') }}</td>
         </tr>
+        @endif
         @if(($fiche->deduction_retard ?? 0) > 0)
         <tr>
             <td>Pénalités retards</td>
