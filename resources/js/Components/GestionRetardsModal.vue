@@ -111,8 +111,16 @@
                                             :class="day.isWeekend ? 'bg-orange-50 border-orange-200' : ''"
                                             @change="onTimeChange(index)" />
                                     </td>
-                                    <td class="px-2 py-1 text-center text-xs">
-                                        {{ day.heures_travaillees || 0 }}h
+                                    <td class="px-2 py-1 text-center">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <button @click="adjustHours(index, -0.5)"
+                                                class="w-6 h-6 rounded bg-red-100 hover:bg-red-200 text-red-600 text-xs font-bold flex items-center justify-center"
+                                                title="-30min">−</button>
+                                            <span class="text-xs w-10 text-center">{{ day.heures_travaillees || 0 }}h</span>
+                                            <button @click="adjustHours(index, 0.5)"
+                                                class="w-6 h-6 rounded bg-green-100 hover:bg-green-200 text-green-600 text-xs font-bold flex items-center justify-center"
+                                                title="+30min">+</button>
+                                        </div>
                                     </td>
                                     <td class="px-2 py-1 text-center text-xs font-semibold"
                                         :class="day.coefficient > 1 ? 'text-orange-700 bg-orange-50' : 'text-gray-400'">
@@ -471,6 +479,13 @@ const onTimeChange = (index) => {
         if (minutes < 0) minutes += 24 * 60;
         d.heures_travaillees = (minutes / 60).toFixed(2);
     }
+};
+
+const adjustHours = (index, delta) => {
+    const d = allDays.value[index];
+    let hours = parseFloat(d.heures_travaillees) || 0;
+    hours = Math.max(0, Math.round((hours + delta) * 100) / 100);
+    d.heures_travaillees = hours.toFixed(2);
 };
 
 const toggleAllLate = (e) => {
